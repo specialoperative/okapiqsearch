@@ -77,7 +77,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <StaggeredReveal staggerDelay={0.2}>
-              <OrigamiCard pattern="okapi" className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300" onClick={() => onNavigate('market-scanner')}>
+              <OrigamiCard pattern="okapi" className="p-8 cursor-pointer transition-all duration-300" onClick={() => onNavigate('market-scanner')}>
                 <div className="flex items-center mb-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                     <Search className="w-6 h-6 text-white" />
@@ -103,7 +103,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 </ul>
               </OrigamiCard>
 
-              <OrigamiCard pattern="cheetah" className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300" onClick={() => onNavigate('market-analysis')}>
+              <OrigamiCard pattern="cheetah" className="p-8 cursor-pointer transition-all duration-300" onClick={() => onNavigate('market-analysis')}>
                 <div className="flex items-center mb-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <Building2 className="w-6 h-6 text-white" />
@@ -129,7 +129,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 </ul>
               </OrigamiCard>
 
-              <OrigamiCard pattern="leopard" className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300" onClick={() => onNavigate('crm')}>
+              <OrigamiCard pattern="leopard" className="p-8 cursor-pointer transition-all duration-300" onClick={() => onNavigate('crm')}>
                 <div className="flex items-center mb-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                     <Users className="w-6 h-6 text-white" />

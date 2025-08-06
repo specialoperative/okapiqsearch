@@ -60,6 +60,10 @@ class YelpScraper:
             print(f"Error scraping Yelp: {e}")
             return self._get_fallback_data(location, industry, limit)
     
+    def scrape_businesses(self, location: str, industry: str = None) -> List[Dict]:
+        """Scrape businesses from Yelp (alias for search_businesses)"""
+        return self.search_businesses(location, industry, limit=10)
+    
     def _build_search_url(self, location: str, category: str = None) -> str:
         """Build Yelp search URL"""
         base_url = "https://www.yelp.com/search"
@@ -151,7 +155,7 @@ class YelpScraper:
             succession_risk = self._calculate_succession_risk(years_in_business, rating)
             
             # Estimate owner age
-            owner_age = self._estimate_owner_age(years_in_business)
+            owner_age = self._estimate_owner_age(years_in_business, industry)
             
             # Estimate market share
             market_share = self._estimate_market_share(rating, review_count)
@@ -261,11 +265,38 @@ class YelpScraper:
         base_risk = age_risk + rating_risk
         return min(100, max(30, int(base_risk)))
     
-    def _estimate_owner_age(self, years_in_business: int) -> int:
-        """Estimate owner age based on years in business"""
-        # Assume owner started business at age 30-40
-        start_age = random.randint(30, 40)
-        return start_age + years_in_business
+    def _estimate_owner_age(self, years_in_business: int, industry: str = None) -> int:
+        """Estimate owner age based on years in business and industry"""
+        # Industry-specific age patterns
+        industry_age_patterns = {
+            'hvac': {'start_age_range': (25, 35), 'current_age_bias': 0},  # HVAC owners tend to be younger
+            'plumbing': {'start_age_range': (28, 38), 'current_age_bias': 2},  # Slightly older
+            'electrical': {'start_age_range': (26, 36), 'current_age_bias': 1},
+            'landscaping': {'start_age_range': (30, 40), 'current_age_bias': 3},  # Older demographic
+            'restaurant': {'start_age_range': (32, 42), 'current_age_bias': 2},
+            'retail': {'start_age_range': (35, 45), 'current_age_bias': 5},  # Retail owners tend to be older
+            'healthcare': {'start_age_range': (40, 50), 'current_age_bias': 8},  # Healthcare owners are typically older
+            'automotive': {'start_age_range': (30, 40), 'current_age_bias': 3},
+            'construction': {'start_age_range': (28, 38), 'current_age_bias': 2},
+            'manufacturing': {'start_age_range': (35, 45), 'current_age_bias': 5},
+            'general': {'start_age_range': (30, 40), 'current_age_bias': 0}
+        }
+        
+        # Get industry pattern or use general
+        pattern = industry_age_patterns.get(industry.lower() if industry else 'general', 
+                                          industry_age_patterns['general'])
+        
+        # Estimate start age based on industry
+        start_age = random.randint(*pattern['start_age_range'])
+        
+        # Calculate current age
+        current_age = start_age + years_in_business
+        
+        # Apply industry-specific age bias
+        current_age += pattern['current_age_bias']
+        
+        # Ensure realistic age range (25-75)
+        return max(25, min(current_age, 75))
     
     def _estimate_market_share(self, rating: float, review_count: int) -> float:
         """Estimate market share percentage"""

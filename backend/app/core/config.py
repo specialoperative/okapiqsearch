@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     # API Keys
     YELP_API_KEY: Optional[str] = os.getenv("YELP_API_KEY")
     GOOGLE_MAPS_API_KEY: Optional[str] = os.getenv("GOOGLE_MAPS_API_KEY")
+    GLENCOCO_API_KEY: Optional[str] = os.getenv("GLENCOCO_API_KEY")
     CENSUS_API_KEY: Optional[str] = os.getenv("CENSUS_API_KEY")
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     
@@ -30,6 +31,10 @@ class Settings(BaseSettings):
     # App Settings
     APP_NAME: str = "Okapiq"
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
+    HOST: str = os.getenv("HOST", "0.0.0.0")
+    PORT: int = int(os.getenv("PORT", "8000"))
+    RELOAD: bool = os.getenv("RELOAD", "True").lower() == "true"
+    ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001")
     
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60

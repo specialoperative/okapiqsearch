@@ -44,12 +44,12 @@ export const PallyButton: React.FC<{
   className?: string;
   disabled?: boolean;
 }> = ({ children, onClick, variant = 'primary', size = 'md', className = "", disabled = false }) => {
-  const baseClasses = "font-medium transition-all duration-300 ease-out transform hover:scale-105 active:scale-95";
+  const baseClasses = "font-medium transition-all duration-300 ease-out transform active:scale-95";
   
   const variantClasses = {
-    primary: "bg-okapi-brown-600 text-white hover:bg-okapi-brown-700 shadow-lg hover:shadow-xl",
-    secondary: "bg-okapi-brown-100 text-okapi-brown-800 hover:bg-okapi-brown-200 border border-okapi-brown-300",
-    ghost: "text-okapi-brown-700 hover:text-okapi-brown-900 hover:bg-okapi-brown-50"
+      primary: "bg-okapi-brown-600 text-white shadow-lg",
+  secondary: "bg-okapi-brown-100 text-okapi-brown-800 border border-okapi-brown-300",
+  ghost: "text-okapi-brown-700"
   };
   
   const sizeClasses = {
