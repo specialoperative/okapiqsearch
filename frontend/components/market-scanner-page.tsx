@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { SmoothReveal, StaggeredReveal, PallyButton, OrigamiCard, SmoothNavLink } from '../ui/smooth-components';
-import { ArrowLeft, Search, TrendingUp, Users, Building2, Target, Zap, BarChart3, Filter, MapPin, DollarSign, Calendar, Star, Phone, Mail, ExternalLink, AlertCircle, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Search, TrendingUp, Users, Building2, Target, Zap, BarChart3, Filter, MapPin, DollarSign, Calendar, Star, Phone, Mail, ExternalLink, AlertCircle, CheckCircle, Map, Globe, Database, Shield, Activity, Menu } from 'lucide-react';
+import InteractiveMap from './interactive-map';
 
 interface MarketScannerPageProps {
-  onNavigate: (page: string) => void;
+  onNavigate?: (page: string) => void;
 }
 
 export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps) {
@@ -18,6 +19,8 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
   const [success, setSuccess] = useState<string | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [recentScans, setRecentScans] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
+  const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
 
   const industries = [
     'HVAC', 'Plumbing', 'Electrical', 'Landscaping', 'Restaurant', 
@@ -32,494 +35,482 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
     'Portland', 'Las Vegas', 'Minneapolis', 'Tampa', 'Orlando'
   ];
 
-  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
   const handleScan = async () => {
     if (!searchTerm.trim()) {
-      setError('Please enter a location to scan.');
+      setError('Please enter a location');
       return;
     }
-    
+
     setIsScanning(true);
     setError(null);
-    setScanResults(null);
     setSuccess(null);
-    
+
     try {
       const response = await fetch('http://localhost:8000/market/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
         },
-        body: JSON.stringify({ 
-          location: searchTerm, 
-          industry: selectedIndustry || null,
-          radius_miles: radiusMiles,
-          timestamp: Date.now()
+        body: JSON.stringify({
+          location: searchTerm,
+          industry: selectedIndustry || 'hvac',
+          radius_miles: radiusMiles
         }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to scan market');
+      }
+
+      const data = await response.json();
+      setScanResults(data);
+      setSuccess(`Found ${data.businesses?.length || 0} businesses in ${searchTerm}`);
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Fresh scan results:', data);
-        setScanResults(data);
-        
-        // Add to recent scans
-        setRecentScans(prev => [data, ...prev.slice(0, 4)]);
-        
-        // Show success message
-        setSuccess(`Successfully scanned ${data.location} market! Found ${data.business_count} businesses. (${new Date().toLocaleTimeString()})`);
-        setTimeout(() => {
-          setSuccess(null);
-        }, 5000);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Scan failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error during scan:', error);
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        setError('Network error. Please check your connection and try again.');
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
+      // Add to recent scans
+      setRecentScans(prev => [{
+        id: Date.now(),
+        location: searchTerm,
+        industry: selectedIndustry || 'hvac',
+        count: data.businesses?.length || 0,
+        timestamp: new Date().toISOString()
+      }, ...prev.slice(0, 4)]);
+    } catch (err) {
+      setError('Failed to scan market. Please try again.');
+      console.error('Scan error:', err);
     } finally {
       setIsScanning(false);
     }
   };
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setError(null);
-    setSuccess(null);
-    
-    if (value.trim().length > 0) {
-      const suggestions = [...popularLocations, ...industries]
-        .filter(item => item.toLowerCase().includes(value.toLowerCase()))
-        .slice(0, 5);
-      setSearchSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
-    } else {
-      setShowSuggestions(false);
-    }
+  const handleBusinessClick = (business: any) => {
+    setSelectedBusiness(business);
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setSearchTerm(suggestion);
-    setShowSuggestions(false);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && searchTerm.trim()) {
-      handleScan();
-    }
-  };
-
-  const getFragmentationColor = (hhiScore: number) => {
-    if (hhiScore < 0.15) return 'text-green-600';
-    if (hhiScore < 0.25) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getFragmentationText = (hhiScore: number) => {
-    if (hhiScore < 0.15) return 'Highly Fragmented';
-    if (hhiScore < 0.25) return 'Moderately Fragmented';
-    return 'Concentrated';
-  };
-
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000000) {
-      return `$${(amount / 1000000000).toFixed(1)}B`;
-    } else if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(1)}K`;
-    }
+  const formatCurrency = (amount: number | undefined) => {
+    if (!amount || isNaN(amount)) return '$0';
+    if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
+    if (amount >= 1000) return `$${(amount / 1000).toFixed(1)}K`;
     return `$${amount.toLocaleString()}`;
   };
 
+  const getRiskColor = (riskScore: number | undefined) => {
+    if (!riskScore || isNaN(riskScore)) return 'text-gray-600 bg-gray-50';
+    if (riskScore >= 70) return 'text-red-600 bg-red-50';
+    if (riskScore >= 40) return 'text-yellow-600 bg-yellow-50';
+    return 'text-green-600 bg-green-50';
+  };
+
+  const getRiskLevel = (riskScore: number | undefined) => {
+    if (!riskScore || isNaN(riskScore)) return 'Unknown Risk';
+    if (riskScore >= 70) return 'High Risk';
+    if (riskScore >= 40) return 'Medium Risk';
+    return 'Low Risk';
+  };
+
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-okapi-brown-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <PallyButton variant="ghost" onClick={() => onNavigate('landing')} size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </PallyButton>
-              <h1 className="text-2xl font-bold text-okapi-brown-800 ml-4">Market Scanner</h1>
+    <div className="min-h-screen bg-gradient-to-br from-okapi-brown-50 via-white to-okapi-brown-50">
+      {/* Jaguar Stripes Background Pattern */}
+      <div 
+        className="fixed inset-0 opacity-5 pointer-events-none"
+        style={{
+          background: `
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 15px,
+              rgba(139, 69, 19, 0.1) 15px,
+              rgba(139, 69, 19, 0.1) 30px
+            ),
+            repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 15px,
+              rgba(139, 69, 19, 0.05) 15px,
+              rgba(139, 69, 19, 0.05) 30px
+            )
+          `
+        }}
+      />
+
+      <div className="relative z-10">
+        {/* Header */}
+        <motion.div 
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          className="bg-white/80 backdrop-blur-md border-b border-okapi-brown-200 shadow-sm"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                {onNavigate && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => onNavigate('home')}
+                    className="flex items-center space-x-2 text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                    <span className="font-medium">Back</span>
+                  </motion.button>
+                )}
+                
+                <div>
+                  <h1 className="text-2xl font-bold text-okapi-brown-900">
+                    Market Intelligence Scanner
+                  </h1>
+                  <p className="text-okapi-brown-600">
+                    Discover acquisition opportunities with data-driven insights
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-okapi-brown-100 rounded-lg"
+                >
+                  <Database className="w-5 h-5 text-okapi-brown-600" />
+                  <span className="text-sm font-medium text-okapi-brown-700">
+                    Real-time Data
+                  </span>
+                </motion.div>
+              </div>
             </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <SmoothNavLink onClick={() => onNavigate('market-analysis')}>Analysis</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('crm')}>CRM</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('dashboard')}>Dashboard</SmoothNavLink>
-            </nav>
           </div>
-        </div>
-      </header>
+        </motion.div>
 
-      {/* Scanner Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <SmoothReveal>
-          <h2 className="text-4xl font-bold text-okapi-brown-900 mb-8 text-center">Market Intelligence Scanner</h2>
-        </SmoothReveal>
-
-        {/* Search Interface */}
-        <SmoothReveal delay={0.2}>
-          <OrigamiCard pattern="okapi" className="p-8 mb-8">
-            <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Search Section */}
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white rounded-2xl shadow-xl border border-okapi-brown-200 p-6 mb-8"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              {/* Location Input */}
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-okapi-brown-700 mb-2">
+                  Location
+                </label>
                 <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-okapi-brown-400" />
                   <input
                     type="text"
-                    placeholder="Enter a city, ZIP, or industry..."
                     value={searchTerm}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    onFocus={() => setShowSuggestions(searchSuggestions.length > 0)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                    className="w-full px-4 py-3 pl-10 border border-okapi-brown-300 rounded-md focus:ring-2 focus:ring-okapi-brown-500 focus:border-transparent"
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Enter city, state, or zip code"
+                    className="w-full pl-10 pr-4 py-3 border border-okapi-brown-300 rounded-lg focus:ring-2 focus:ring-okapi-brown-500 focus:border-okapi-brown-500 transition-colors"
                   />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-okapi-brown-400" />
-                  
-                  {/* Search Suggestions */}
-                  {showSuggestions && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-okapi-brown-200 rounded-md shadow-lg z-10">
-                      {searchSuggestions.map((suggestion, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          className="w-full px-4 py-2 text-left hover:bg-okapi-brown-50 text-sm text-okapi-brown-700"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {popularLocations.slice(0, 6).map((location) => (
+                    <button
+                      key={location}
+                      onClick={() => setSearchTerm(location)}
+                      className="px-3 py-1 text-xs bg-okapi-brown-100 text-okapi-brown-700 rounded-full hover:bg-okapi-brown-200 transition-colors"
+                    >
+                      {location}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Industry Selection */}
+              <div>
+                <label className="block text-sm font-medium text-okapi-brown-700 mb-2">
+                  Industry
+                </label>
+                <select
+                  value={selectedIndustry}
+                  onChange={(e) => setSelectedIndustry(e.target.value)}
+                  className="w-full px-4 py-3 border border-okapi-brown-300 rounded-lg focus:ring-2 focus:ring-okapi-brown-500 focus:border-okapi-brown-500 transition-colors"
+                >
+                  <option value="">All Industries</option>
+                  {industries.map((industry) => (
+                    <option key={industry} value={industry.toLowerCase()}>
+                      {industry}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Scan Button */}
+              <div className="flex items-end">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleScan}
+                  disabled={isScanning}
+                  className="w-full bg-gradient-to-r from-okapi-brown-600 to-okapi-brown-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-okapi-brown-700 hover:to-okapi-brown-800 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isScanning ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Scanning...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center space-x-2">
+                      <Target className="w-5 h-5" />
+                      <span>Scan Market</span>
                     </div>
                   )}
-                </div>
-                
-                <div className="relative">
-                  <select
-                    value={selectedIndustry}
-                    onChange={(e) => setSelectedIndustry(e.target.value)}
-                    className="w-full px-4 py-3 border border-okapi-brown-300 rounded-md focus:ring-2 focus:ring-okapi-brown-500 focus:border-transparent"
-                  >
-                    <option value="">All Industries</option>
-                    {industries.map((industry) => (
-                      <option key={industry} value={industry}>{industry}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex gap-2">
-                  <PallyButton 
-                    onClick={handleScan}
-                    disabled={isScanning || !searchTerm.trim()}
-                    className="flex-1"
-                  >
-                    {isScanning ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Scanning Market...
-                      </div>
-                    ) : (
-                      'Scan Market'
-                    )}
-                  </PallyButton>
-                  
-                  <PallyButton 
-                    variant="secondary"
-                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    className="px-3"
-                  >
-                    <Filter className="w-4 h-4" />
-                  </PallyButton>
-                </div>
+                </motion.button>
               </div>
-
-              {/* Advanced Filters */}
-              {showAdvancedFilters && (
-                <div className="mb-6 p-4 bg-okapi-brown-50 rounded-lg">
-                  <h4 className="font-semibold text-okapi-brown-900 mb-3">Advanced Filters</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-okapi-brown-700 mb-1">
-                        Search Radius (miles)
-                      </label>
-                      <input
-                        type="range"
-                        min="5"
-                        max="100"
-                        value={radiusMiles}
-                        onChange={(e) => setRadiusMiles(parseInt(e.target.value))}
-                        className="w-full"
-                      />
-                      <span className="text-sm text-okapi-brown-600">{radiusMiles} miles</span>
-                    </div>
-                    <div className="flex items-end">
-                      <PallyButton 
-                        variant="secondary" 
-                        onClick={() => {
-                          setSearchTerm('');
-                          setSelectedIndustry('');
-                          setRadiusMiles(25);
-                          setError(null);
-                        }}
-                        size="sm"
-                      >
-                        Clear Filters
-                      </PallyButton>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex flex-wrap gap-2 justify-center">
-                {popularLocations.map((location) => (
-                  <button 
-                    key={location}
-                    onClick={() => handleSuggestionClick(location)}
-                    className="px-3 py-1 text-sm bg-okapi-brown-100 text-okapi-brown-700 rounded-full hover:bg-okapi-brown-200 transition-colors"
-                  >
-                    {location}
-                  </button>
-                ))}
-              </div>
-              
-              {error && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
-                  <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                  <p className="text-red-700 text-sm">{error}</p>
-                  <button 
-                    onClick={() => setError(null)}
-                    className="ml-auto text-red-500 hover:text-red-700"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-              
-              {success && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center">
-                  <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-                  <p className="text-green-700 text-sm">{success}</p>
-                  <button 
-                    onClick={() => setSuccess(null)}
-                    className="ml-auto text-green-500 hover:text-green-700"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
             </div>
-          </OrigamiCard>
-        </SmoothReveal>
 
-        {/* Results */}
-        {scanResults && (
-          <SmoothReveal delay={0.4}>
-            <OrigamiCard pattern="zebra" className="p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-okapi-brown-900">Scan Results</h3>
-                <div className="text-sm text-okapi-brown-600 flex items-center">
-                  <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                  {scanResults.location} • {scanResults.industry || 'All Industries'}
+            {/* Advanced Filters Toggle */}
+            <div className="mt-4 flex items-center justify-between">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="flex items-center space-x-2 text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"
+              >
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">Advanced Filters</span>
+              </motion.button>
+
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-okapi-brown-600">View:</span>
+                <div className="flex bg-okapi-brown-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      viewMode === 'list' 
+                        ? 'bg-white text-okapi-brown-900 shadow-sm' 
+                        : 'text-okapi-brown-600 hover:text-okapi-brown-800'
+                    }`}
+                  >
+                    <Menu className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('map')}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                      viewMode === 'map' 
+                        ? 'bg-white text-okapi-brown-900 shadow-sm' 
+                        : 'text-okapi-brown-600 hover:text-okapi-brown-800'
+                    }`}
+                  >
+                    <Map className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
+            </div>
+          </motion.div>
 
-              {/* Key Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="text-center p-6 bg-white rounded-lg border border-okapi-brown-200">
-                  <Building2 className="w-8 h-8 text-okapi-brown-600 mx-auto mb-2" />
-                  <h4 className="text-lg font-bold text-okapi-brown-900 mb-1">Businesses Found</h4>
-                  <p className="text-3xl font-bold text-okapi-brown-600">{scanResults.business_count || 0}</p>
-                </div>
-                
-                <div className="text-center p-6 bg-white rounded-lg border border-okapi-brown-200">
-                  <DollarSign className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                  <h4 className="text-lg font-bold text-okapi-brown-900 mb-1">TAM Estimate</h4>
-                  <p className="text-3xl font-bold text-okapi-brown-600">{formatCurrency(scanResults.tam_estimate)}</p>
-                </div>
-                
-                <div className="text-center p-6 bg-white rounded-lg border border-okapi-brown-200">
-                  <BarChart3 className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                  <h4 className="text-lg font-bold text-okapi-brown-900 mb-1">HHI Score</h4>
-                  <p className={`text-3xl font-bold ${getFragmentationColor(scanResults.hhi_score)}`}>
-                    {(scanResults.hhi_score * 100).toFixed(1)}%
-                  </p>
-                </div>
-                
-                <div className="text-center p-6 bg-white rounded-lg border border-okapi-brown-200">
-                  <Target className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                  <h4 className="text-lg font-bold text-okapi-brown-900 mb-1">Market Status</h4>
-                  <p className={`text-lg font-bold ${getFragmentationColor(scanResults.hhi_score)}`}>
-                    {getFragmentationText(scanResults.hhi_score)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Google Maps & UC Berkeley Integration */}
-              <div className="mb-6 space-y-4">
-                {/* Google Maps Verification */}
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center mb-2">
-                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center mr-2">
-                      <span className="text-white text-xs font-bold">🗺️</span>
-                    </div>
-                    <h4 className="text-lg font-bold text-green-900">Google Maps Verified Data</h4>
+          {/* Results Section */}
+          {scanResults && (
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="space-y-6"
+            >
+              {/* Success Message */}
+              {success && (
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-green-50 border border-green-200 rounded-lg p-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-green-800 font-medium">{success}</span>
                   </div>
-                  <p className="text-sm text-green-700 mb-2">
-                    All business addresses and phone numbers match real Google Maps search results. 
-                    Search any address on Google Maps to verify authenticity.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                      Real Business Addresses
-                    </span>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                      Verified Phone Numbers
-                    </span>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                      Google Maps Searchable
-                    </span>
-                  </div>
-                </div>
-
-                {/* Berkeley Database Integration */}
-                {scanResults.berkeley_integration && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-2">
-                        <span className="text-white text-xs font-bold">UC</span>
-                      </div>
-                      <h4 className="text-lg font-bold text-blue-900">UC Berkeley A-Z Databases Integration</h4>
-                    </div>
-                    <p className="text-sm text-blue-700 mb-2">
-                      Business profiles integrate with academic databases including IBISWorld, Frost & Sullivan, and BLS data.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {scanResults.berkeley_integration.available_databases?.map((db: string, index: number) => (
-                        <span key={index} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                          {db}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Business Listings */}
-              {scanResults.businesses && scanResults.businesses.length > 0 && (
-                <div className="mb-8">
-                  <h4 className="text-xl font-bold text-okapi-brown-900 mb-4">Top Businesses</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {scanResults.businesses.slice(0, 6).map((business: any, index: number) => (
-                      <div key={index} className="bg-white p-4 rounded-lg border border-okapi-brown-200">
-                        <div className="flex justify-between items-start mb-2">
-                          <h5 className="font-semibold text-okapi-brown-900">{business.name}</h5>
-                          <div className="flex items-center">
-                            <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                            <span className="text-sm text-okapi-brown-600">{business.rating}</span>
-                          </div>
-                        </div>
-                        <div className="text-sm text-okapi-brown-600 mb-2">
-                          <div className="flex items-center mb-1">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {business.address}
-                          </div>
-                          <div className="flex items-center mb-1">
-                            <DollarSign className="w-3 h-3 mr-1" />
-                            Est. Revenue: {formatCurrency(business.estimated_revenue)}
-                          </div>
-                          <div className="flex items-center">
-                            <Users className="w-3 h-3 mr-1" />
-                            {business.employee_count} employees
-                          </div>
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                          {business.phone && (
-                            <button 
-                              className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors duration-200 flex items-center"
-                              title={`Call ${business.name}`}
-                              onClick={() => window.open(`tel:${business.phone}`, '_self')}
-                            >
-                              <Phone className="w-3 h-3 mr-1" />
-                              Call
-                            </button>
-                          )}
-                          {business.website && (
-                            <a 
-                              href={business.website} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors duration-200 flex items-center"
-                              title={`View ${business.name} profile with UC Berkeley data`}
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              Business Profile
-                            </a>
-                          )}
-                          <button 
-                            className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors duration-200 flex items-center"
-                            title={`Verify ${business.name} on Google Maps`}
-                            onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(business.address)}`, '_blank')}
-                          >
-                            <MapPin className="w-3 h-3 mr-1" />
-                            Verify on Maps
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                </motion.div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-4 justify-center">
-                <PallyButton onClick={() => onNavigate('crm')} variant="secondary">
-                  <Users className="w-4 h-4 mr-2" />
-                  Add to CRM
-                </PallyButton>
-                <PallyButton onClick={() => onNavigate('market-analysis')}>
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  Detailed Analysis
-                </PallyButton>
-              </div>
-            </OrigamiCard>
-          </SmoothReveal>
-        )}
+              {/* Error Message */}
+              {error && (
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-red-50 border border-red-200 rounded-lg p-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <span className="text-red-800 font-medium">{error}</span>
+                  </div>
+                </motion.div>
+              )}
 
-        {/* Recent Scans */}
-        {recentScans.length > 0 && (
-          <SmoothReveal delay={0.6}>
-            <OrigamiCard pattern="cheetah" className="p-8 mt-8">
-              <h3 className="text-2xl font-bold text-okapi-brown-900 mb-6">Recent Scans</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {recentScans.map((scan, index) => (
-                  <div key={index} className="bg-white p-4 rounded-lg border border-okapi-brown-200">
-                    <div className="flex justify-between items-start mb-2">
-                      <h5 className="font-semibold text-okapi-brown-900">{scan.location}</h5>
-                      <span className="text-xs bg-okapi-brown-100 text-okapi-brown-700 px-2 py-1 rounded">
-                        {scan.business_count} businesses
+              {/* View Toggle */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-okapi-brown-900">
+                  Market Results
+                </h2>
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-okapi-brown-600">
+                    {scanResults.businesses?.length || 0} businesses found
+                  </span>
+                </div>
+              </div>
+
+              {/* Map View */}
+              {viewMode === 'map' && (
+                <InteractiveMap 
+                  businesses={scanResults?.businesses || []}
+                  location={searchTerm}
+                  industry={selectedIndustry || 'hvac'}
+                  onBusinessClick={handleBusinessClick}
+                />
+              )}
+
+              {/* List View */}
+              {viewMode === 'list' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {scanResults.businesses?.map((business: any, index: number) => (
+                    <motion.div
+                      key={`${business.name}-${index}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-white rounded-xl shadow-lg border border-okapi-brown-200 overflow-hidden hover:shadow-xl transition-all duration-300"
+                    >
+                      <div className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-okapi-brown-900">
+                            {business.name || 'Unknown Business'}
+                          </h3>
+                          <div className="flex items-center space-x-1">
+                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                            <span className="text-sm text-okapi-brown-600">
+                              {business.rating || 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between text-sm text-okapi-brown-600">
+                            <div className="flex items-center space-x-4">
+                              <span>{business.address || 'Address not available'}</span>
+                              <span>{business.phone || 'Phone not available'}</span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-center space-x-2">
+                              <DollarSign className="h-4 w-4 text-okapi-brown-400" />
+                              <div>
+                                <p className="text-xs text-okapi-brown-500">Revenue</p>
+                                <p className="text-sm font-medium text-okapi-brown-900">
+                                  {formatCurrency(business.estimated_revenue)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Users className="h-4 w-4 text-okapi-brown-400" />
+                              <div>
+                                <p className="text-xs text-okapi-brown-500">Employees</p>
+                                <p className="text-sm font-medium text-okapi-brown-900">
+                                  {business.employee_count || 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-4 w-4 text-okapi-brown-400" />
+                              <div>
+                                <p className="text-xs text-okapi-brown-500">Years</p>
+                                <p className="text-sm font-medium text-okapi-brown-900">
+                                  {business.years_in_business || 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <TrendingUp className="h-4 w-4 text-okapi-brown-400" />
+                              <div>
+                                <p className="text-xs text-okapi-brown-500">Lead Score</p>
+                                <p className={`text-sm font-medium ${
+                                  business.lead_score >= 80 ? 'text-green-600' :
+                                  business.lead_score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                }`}>
+                                  {business.lead_score || 'N/A'}%
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-okapi-brown-100">
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                              getRiskColor(business.succession_risk_score)
+                            }`}>
+                              {getRiskLevel(business.succession_risk_score)}
+                            </span>
+                            <div className="flex items-center space-x-2">
+                              {business.website && (
+                                <a
+                                  href={business.website}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              )}
+                              <button
+                                onClick={() => handleBusinessClick(business)}
+                                className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"
+                              >
+                                <MapPin className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Recent Scans */}
+          {recentScans.length > 0 && (
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-8"
+            >
+              <h3 className="text-lg font-semibold text-okapi-brown-900 mb-4">
+                Recent Scans
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {recentScans.map((scan) => (
+                  <motion.div
+                    key={scan.id}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white rounded-lg shadow-md border border-okapi-brown-200 p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-okapi-brown-900">
+                        {scan.location}
+                      </span>
+                      <span className="text-xs text-okapi-brown-500">
+                        {new Date(scan.timestamp).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-sm text-okapi-brown-600 mb-2">
-                      {scan.industry || 'All Industries'}
-                    </p>
-                    <div className="text-xs text-okapi-brown-500">
-                      TAM: {formatCurrency(scan.tam_estimate)}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-okapi-brown-600 capitalize">
+                        {scan.industry}
+                      </span>
+                      <span className="text-sm font-semibold text-okapi-brown-900">
+                        {scan.count} businesses
+                      </span>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            </OrigamiCard>
-          </SmoothReveal>
-        )}
+            </motion.div>
+          )}
+        </div>
       </div>
     </div>
   );

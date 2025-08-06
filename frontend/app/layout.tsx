@@ -1,68 +1,53 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { Providers } from './providers';
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Okapiq - Bloomberg for Small Businesses',
-  description: 'AI-powered deal sourcing from public data, owner signals, and market intelligence. Get CRM-ready leads with TAM/SAM estimates and ad spend analysis while competitors are still cold calling.',
-  keywords: 'SMB deals, market intelligence, TAM SAM SOM, HHI, succession risk, lead generation, M&A, acquisition',
-  authors: [{ name: 'Okapiq Team' }],
-  creator: 'Okapiq',
-  publisher: 'Okapiq',
-  robots: 'index, follow',
-  metadataBase: new URL('http://localhost:3000'),
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://app.okapiq.com/',
-    title: 'Okapiq - Bloomberg for Small Businesses',
-    description: 'AI-powered deal sourcing and market intelligence for SMB acquisitions',
-    siteName: 'Okapiq',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'Okapiq - Market Intelligence Platform',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Okapiq - Bloomberg for Small Businesses',
-    description: 'AI-powered deal sourcing and market intelligence for SMB acquisitions',
-    images: ['/og-image.png'],
-  },
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
-  },
-  manifest: '/manifest.json',
-};
-
-export const viewport = {
-  themeColor: '#3b82f6',
-};
+  description: 'Market intelligence platform for small business acquisitions',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossOrigin=""
+        />
       </head>
-      <body className={`${inter.className} h-full bg-gray-50`}>
-        <Providers>
-          {children}
-        </Providers>
+      <body 
+        className={inter.className}
+        style={{
+          background: `
+            linear-gradient(135deg, rgba(139, 69, 19, 0.02) 0%, rgba(160, 82, 45, 0.05) 100%),
+            repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 15px,
+              rgba(139, 69, 19, 0.01) 15px,
+              rgba(139, 69, 19, 0.01) 30px
+            ),
+            repeating-linear-gradient(
+              -45deg,
+              transparent,
+              transparent 15px,
+              rgba(160, 82, 45, 0.01) 15px,
+              rgba(160, 82, 45, 0.01) 30px
+            )
+          `
+        }}
+      >
+        {children}
       </body>
     </html>
-  );
+  )
 } 
