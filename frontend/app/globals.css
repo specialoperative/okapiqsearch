@@ -33,13 +33,79 @@
   
   /* Input styles */
   .input {
-    @apply w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors;
+    @apply w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent;
   }
   
-  /* Loading spinner */
-  .loading-spinner {
-    @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
+  /* Map container styles */
+  .map-container {
+    @apply relative overflow-hidden rounded-lg;
+    max-height: 400px;
+    min-height: 320px;
   }
+  
+  .map-container .leaflet-container {
+    @apply rounded-lg;
+    border: 1px solid #e5e7eb;
+  }
+  
+  /* Ensure map doesn't overflow its container */
+  .leaflet-container {
+    @apply rounded-lg;
+    z-index: 1;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}
+
+/* Custom color palette for Okapiq */
+@layer utilities {
+  .text-okapi-brown-50 { color: #FDF8F3; }
+  .text-okapi-brown-100 { color: #F5E6D3; }
+  .text-okapi-brown-200 { color: #E8D5B7; }
+  .text-okapi-brown-300 { color: #D4C19A; }
+  .text-okapi-brown-400 { color: #C0AD7D; }
+  .text-okapi-brown-500 { color: #AC9960; }
+  .text-okapi-brown-600 { color: #8B5A2B; }
+  .text-okapi-brown-700 { color: #6B4423; }
+  .text-okapi-brown-800 { color: #4A2F1A; }
+  .text-okapi-brown-900 { color: #291A11; }
+  
+  .bg-okapi-brown-50 { background-color: #FDF8F3; }
+  .bg-okapi-brown-100 { background-color: #F5E6D3; }
+  .bg-okapi-brown-200 { background-color: #E8D5B7; }
+  .bg-okapi-brown-300 { background-color: #D4C19A; }
+  .bg-okapi-brown-400 { background-color: #C0AD7D; }
+  .bg-okapi-brown-500 { background-color: #AC9960; }
+  .bg-okapi-brown-600 { background-color: #8B5A2B; }
+  .bg-okapi-brown-700 { background-color: #6B4423; }
+  .bg-okapi-brown-800 { background-color: #4A2F1A; }
+  .bg-okapi-brown-900 { background-color: #291A11; }
+  
+  .border-okapi-brown-50 { border-color: #FDF8F3; }
+  .border-okapi-brown-100 { border-color: #F5E6D3; }
+  .border-okapi-brown-200 { border-color: #E8D5B7; }
+  .border-okapi-brown-300 { border-color: #D4C19A; }
+  .border-okapi-brown-400 { border-color: #C0AD7D; }
+  .border-okapi-brown-500 { border-color: #AC9960; }
+  .border-okapi-brown-600 { border-color: #8B5A2B; }
+  .border-okapi-brown-700 { border-color: #6B4423; }
+  .border-okapi-brown-800 { border-color: #4A2F1A; }
+  .border-okapi-brown-900 { border-color: #291A11; }
 }
 
 /* Leaflet Map Styles */
@@ -105,21 +171,4 @@
 /* Focus styles for accessibility */
 *:focus {
   @apply outline-none ring-2 ring-blue-500 ring-offset-2;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-gray-100;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
 } 
