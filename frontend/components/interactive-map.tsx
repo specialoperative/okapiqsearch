@@ -111,18 +111,18 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
   if (mapError) {
     return (
-      <div className="w-full h-96 bg-gradient-to-br from-okapi-brown-50 to-okapi-brown-100 rounded-xl shadow-2xl flex items-center justify-center">
+      <div className="w-full h-32 bg-gradient-to-br from-okapi-brown-50 to-okapi-brown-100 rounded-xl shadow-2xl flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Map Loading Error</h3>
-          <p className="text-gray-600 mb-4">Unable to load the interactive map</p>
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Map Loading Error</h3>
+          <p className="text-xs text-gray-600 mb-2">Unable to load the interactive map</p>
           <button 
             onClick={() => setMapError(false)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
           >
             Try Again
           </button>
@@ -133,10 +133,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
 
   if (!isMapLoaded || businessesWithCoords.length === 0) {
     return (
-      <div className="w-full h-96 bg-gradient-to-br from-okapi-brown-50 to-okapi-brown-100 rounded-xl shadow-2xl flex items-center justify-center">
+      <div className="w-full h-32 bg-gradient-to-br from-okapi-brown-50 to-okapi-brown-100 rounded-xl shadow-2xl flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-okapi-brown-600 mx-auto mb-4"></div>
-          <p className="text-okapi-brown-600 font-medium">Loading interactive map...</p>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-okapi-brown-600 mx-auto mb-2"></div>
+          <p className="text-okapi-brown-600 text-sm font-medium">Loading interactive map...</p>
         </div>
       </div>
     );
