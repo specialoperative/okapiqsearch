@@ -39,19 +39,39 @@
   /* Map container styles */
   .map-container {
     @apply relative overflow-hidden rounded-lg;
-    max-height: 160px;
-    min-height: 128px;
+    max-height: 128px !important;
+    min-height: 128px !important;
+    height: 128px !important;
   }
   
   .map-container .leaflet-container {
     @apply rounded-lg;
     border: 1px solid #e5e7eb;
+    max-height: 128px !important;
+    min-height: 128px !important;
+    height: 128px !important;
   }
   
   /* Ensure map doesn't overflow its container */
   .leaflet-container {
     @apply rounded-lg;
     z-index: 1;
+    max-height: 128px !important;
+    min-height: 128px !important;
+    height: 128px !important;
+  }
+  
+  /* Additional map constraints */
+  .leaflet-map-pane,
+  .leaflet-tile-pane,
+  .leaflet-overlay-pane,
+  .leaflet-marker-pane,
+  .leaflet-shadow-pane,
+  .leaflet-tooltip-pane,
+  .leaflet-popup-pane {
+    max-height: 128px !important;
+    min-height: 128px !important;
+    height: 128px !important;
   }
   
   /* Custom scrollbar */

@@ -175,7 +175,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
       </div>
 
       {/* Real Interactive Map */}
-      <div className="h-32 relative map-container">
+      <div className="h-32 relative map-container" style={{ maxHeight: '128px', minHeight: '128px', overflow: 'hidden' }}>
         <MapContainer
           center={[centerLat, centerLng]}
           zoom={12}
@@ -185,7 +185,9 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             position: 'absolute',
             top: 0,
             left: 0,
-            zIndex: 1
+            zIndex: 1,
+            maxHeight: '128px',
+            minHeight: '128px'
           }}
           zoomControl={false}
         >
