@@ -302,13 +302,13 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
             </div>
           </motion.div>
 
-          {/* Interactive Map - Positioned right after search controls */}
+          {/* Interactive Map - Positioned below Real-time Data section */}
           {viewMode === 'map' && (
             <motion.div 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="mt-6"
+              className="mt-8"
             >
               <InteractiveMap 
                 businesses={scanResults?.businesses || []}
