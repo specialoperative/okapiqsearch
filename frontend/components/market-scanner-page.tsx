@@ -109,24 +109,17 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-okapi-brown-50 via-white to-okapi-brown-50">
-      {/* Jaguar Stripes Background Pattern */}
+      {/* Subtle Background Pattern */}
       <div 
-        className="fixed inset-0 opacity-5 pointer-events-none"
+        className="fixed inset-0 opacity-3 pointer-events-none"
         style={{
           background: `
             repeating-linear-gradient(
               45deg,
               transparent,
-              transparent 15px,
-              rgba(139, 69, 19, 0.1) 15px,
-              rgba(139, 69, 19, 0.1) 30px
-            ),
-            repeating-linear-gradient(
-              -45deg,
-              transparent,
-              transparent 15px,
-              rgba(139, 69, 19, 0.05) 15px,
-              rgba(139, 69, 19, 0.05) 30px
+              transparent 20px,
+              rgba(139, 69, 19, 0.03) 20px,
+              rgba(139, 69, 19, 0.03) 40px
             )
           `
         }}
