@@ -39,8 +39,8 @@
   /* Map container styles */
   .map-container {
     @apply relative overflow-hidden rounded-lg;
-    max-height: 200px;
-    min-height: 160px;
+    max-height: 160px;
+    min-height: 128px;
   }
   
   .map-container .leaflet-container {

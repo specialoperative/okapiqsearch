@@ -302,6 +302,23 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
             </div>
           </motion.div>
 
+          {/* Interactive Map - Positioned right after search controls */}
+          {viewMode === 'map' && (
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="mt-6"
+            >
+              <InteractiveMap 
+                businesses={scanResults?.businesses || []}
+                location={searchTerm}
+                industry={selectedIndustry || 'hvac'}
+                onBusinessClick={handleBusinessClick}
+              />
+            </motion.div>
+          )}
+
           {/* Results Section */}
           {scanResults && (
             <motion.div 
@@ -349,16 +366,6 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
                   </span>
                 </div>
               </div>
-
-              {/* Map View */}
-              {viewMode === 'map' && (
-                <InteractiveMap 
-                  businesses={scanResults?.businesses || []}
-                  location={searchTerm}
-                  industry={selectedIndustry || 'hvac'}
-                  onBusinessClick={handleBusinessClick}
-                />
-              )}
 
               {/* List View */}
               {viewMode === 'list' && (

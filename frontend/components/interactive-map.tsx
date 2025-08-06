@@ -175,7 +175,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
       </div>
 
       {/* Real Interactive Map */}
-      <div className="h-40 relative map-container">
+      <div className="h-32 relative map-container">
         <MapContainer
           center={[centerLat, centerLng]}
           zoom={12}
