@@ -39,26 +39,26 @@
   /* Map container styles */
   .map-container {
     @apply relative overflow-hidden rounded-lg;
-    max-height: 128px !important;
-    min-height: 128px !important;
-    height: 128px !important;
+    max-height: 600px !important;
+    min-height: 400px !important;
+    height: 100% !important;
   }
   
   .map-container .leaflet-container {
     @apply rounded-lg;
     border: 1px solid #e5e7eb;
-    max-height: 128px !important;
-    min-height: 128px !important;
-    height: 128px !important;
+    max-height: 600px !important;
+    min-height: 400px !important;
+    height: 100% !important;
   }
   
   /* Ensure map doesn't overflow its container */
   .leaflet-container {
     @apply rounded-lg;
     z-index: 1;
-    max-height: 128px !important;
-    min-height: 128px !important;
-    height: 128px !important;
+    max-height: 600px !important;
+    min-height: 400px !important;
+    height: 100% !important;
   }
   
   /* Additional map constraints */
@@ -69,9 +69,9 @@
   .leaflet-shadow-pane,
   .leaflet-tooltip-pane,
   .leaflet-popup-pane {
-    max-height: 128px !important;
-    min-height: 128px !important;
-    height: 128px !important;
+    max-height: 600px !important;
+    min-height: 400px !important;
+    height: 100% !important;
   }
   
   /* Custom scrollbar */
@@ -191,4 +191,4 @@
 /* Focus styles for accessibility */
 *:focus {
   @apply outline-none ring-2 ring-blue-500 ring-offset-2;
-} 
+}

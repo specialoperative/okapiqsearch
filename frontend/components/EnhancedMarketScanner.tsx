@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { motion } from 'framer-motion';
 import { 
   Search, 
   Map, 
@@ -207,74 +204,153 @@ const EnhancedMarketScanner: React.FC<EnhancedMarketScannerProps> = ({ onNavigat
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Enhanced Market Intelligence Scanner
+        {/* Enhanced Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 text-center"
+        >
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+            Market Intelligence Scanner
           </h1>
-          <p className="text-lg text-gray-600">
-            Bloomberg-level intelligence for small businesses with advanced signal detection
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Discover acquisition opportunities with data-driven insights and advanced signal detection
           </p>
-        </div>
+        </motion.div>
 
-        {/* Search Controls */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Market Scanner
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Enter city, ZIP, or region..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+        {/* Enhanced Search Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <div className="mb-6 shadow-xl border-0 bg-white/80 backdrop-blur-sm rounded-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 px-6 py-4">
+              <h3 className="flex items-center gap-3 text-blue-900 font-semibold text-lg">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Search className="h-5 w-5 text-blue-600" />
+                </div>
+                Real-time Data
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Location *
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Enter city, state, or zip"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  {/* Quick Location Buttons */}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {['San Francisco', 'Los Angeles', 'New York', 'Chicago', 'Miami', 'Austin'].map((city) => (
+                      <button
+                        key={city}
+                        onClick={() => setLocation(city)}
+                        className={`px-3 py-1 text-xs rounded-full transition-all ${
+                          location === city 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Industry *
+                  </label>
+                  <select
+                    value={industry}
+                    onChange={(e) => setIndustry(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">All Industries</option>
+                    <option value="restaurant">Restaurant</option>
+                    <option value="retail">Retail</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="automotive">Automotive</option>
+                    <option value="construction">Construction</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Min Revenue
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue="$1M"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Max Revenue
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue="$10M"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Industry (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={industry}
-                  onChange={(e) => setIndustry(e.target.value)}
-                  placeholder="e.g., HVAC, Restaurant, Retail..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  onClick={handleScan}
-                  disabled={isScanning || !location.trim()}
-                  className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                >
-                  {isScanning ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Scanning...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Search className="h-4 w-4" />
-                      Scan Market
-                    </div>
-                  )}
-                </Button>
+              
+              <div className="flex items-center justify-between mt-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Owner Age
+                  </label>
+                  <select className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <option>Any age</option>
+                    <option>50+ years</option>
+                    <option>60+ years</option>
+                    <option>70+ years</option>
+                  </select>
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleScan}
+                    disabled={isScanning || !location.trim()}
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isScanning ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Scanning...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Target className="h-4 w-4" />
+                        Scan Market
+                      </div>
+                    )}
+                  </button>
+                  
+                  <button className="px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Advanced Filters
+                  </button>
+                </div>
+                              </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </motion.div>
 
         {/* Results Section */}
         {scanResults.length > 0 && (

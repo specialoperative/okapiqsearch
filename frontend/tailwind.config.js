@@ -8,11 +8,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Ultra-Minimal Okapi Brown Palette - Pally Style
+        // Ultra-Minimal Okapi Brown Palette - Pally Style (Updated for Figma match)
         'okapi-rich-brown': '#A0522D',
         'okapi-dark-brown': '#4A2C17',
-        'okapi-light-brown': '#DEB887',
-        'okapi-cream': '#F5E6D3',
+        'okapi-light-brown': '#D6B88B', // Slightly warmer beige
+        'okapi-cream': '#F7E9D7', // Slightly lighter cream
         'okapi-black': '#2E1A0E',
         'okapi-white': '#FFF8F0',
         
@@ -25,55 +25,55 @@ module.exports = {
         'leopard-cream': '#F5DEB3',
         
         // Core System Colors
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
+        background: '#F7E9D7', // warm beige background
+        foreground: '#4A2C17', // dark brown text
         card: {
-          DEFAULT: 'var(--card)',
-          foreground: 'var(--card-foreground)',
+          DEFAULT: '#F5E6D3', // cream card background
+          foreground: '#4A2C17',
         },
         popover: {
-          DEFAULT: 'var(--popover)',
-          foreground: 'var(--popover-foreground)',
+          DEFAULT: '#F5E6D3',
+          foreground: '#4A2C17',
         },
         primary: {
-          DEFAULT: 'var(--primary)',
-          foreground: 'var(--primary-foreground)',
+          DEFAULT: '#A0522D', // rich brown for buttons
+          foreground: '#FFF8F0',
         },
         secondary: {
-          DEFAULT: 'var(--secondary)',
-          foreground: 'var(--secondary-foreground)',
+          DEFAULT: '#D6B88B', // lighter brown for secondary buttons
+          foreground: '#4A2C17',
         },
         muted: {
-          DEFAULT: 'var(--muted)',
-          foreground: 'var(--muted-foreground)',
+          DEFAULT: '#EDE1D6',
+          foreground: '#7A5A3C',
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          foreground: 'var(--accent-foreground)',
+          DEFAULT: '#00FF88',
+          foreground: '#004422',
         },
         destructive: {
-          DEFAULT: 'var(--destructive)',
-          foreground: 'var(--destructive-foreground)',
+          DEFAULT: '#EF4444',
+          foreground: '#FFF8F0',
         },
-        border: 'var(--border)',
-        input: 'var(--input)',
-        ring: 'var(--ring)',
+        border: '#D6B88B',
+        input: '#D6B88B',
+        ring: '#A0522D',
         chart: {
-          '1': 'var(--chart-1)',
-          '2': 'var(--chart-2)',
-          '3': 'var(--chart-3)',
-          '4': 'var(--chart-4)',
-          '5': 'var(--chart-5)',
+          '1': '#A0522D',
+          '2': '#D6B88B',
+          '3': '#F7E9D7',
+          '4': '#4A2C17',
+          '5': '#FFF8F0',
         },
         sidebar: {
-          DEFAULT: 'var(--sidebar)',
-          foreground: 'var(--sidebar-foreground)',
-          primary: 'var(--sidebar-primary)',
-          'primary-foreground': 'var(--sidebar-primary-foreground)',
-          accent: 'var(--sidebar-accent)',
-          'accent-foreground': 'var(--sidebar-accent-foreground)',
-          border: 'var(--sidebar-border)',
-          ring: 'var(--sidebar-ring)',
+          DEFAULT: '#F5E6D3',
+          foreground: '#4A2C17',
+          primary: '#A0522D',
+          'primary-foreground': '#FFF8F0',
+          accent: '#00FF88',
+          'accent-foreground': '#004422',
+          border: '#D6B88B',
+          ring: '#A0522D',
         },
       },
       borderRadius: {

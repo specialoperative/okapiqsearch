@@ -1,15 +1,34 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
+import { 
+  MapPin, 
+  TrendingUp, 
+  Users, 
+  DollarSign, 
+  AlertTriangle, 
+  Star,
+  Phone,
+  Globe,
+  Eye,
+  Zap
+} from 'lucide-react';
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
   { 
     ssr: false,
-    loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading map...</div>
+    loading: () => (
+      <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-blue-600 font-medium">Loading interactive map...</p>
+        </div>
+      </div>
+    )
   }
 );
 
@@ -86,6 +105,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [businessesWithCoords, setBusinessesWithCoords] = useState<any[]>([]);
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
 
   useEffect(() => {
     if (businesses.length > 0) {
@@ -96,10 +116,17 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   }, [businesses, location]);
 
   const getRiskColor = (riskScore: number | undefined) => {
-    if (!riskScore || isNaN(riskScore)) return '#9CA3AF';
+    if (!riskScore || isNaN(riskScore)) return '#6B7280';
     if (riskScore >= 70) return '#EF4444';
     if (riskScore >= 40) return '#F59E0B';
     return '#10B981';
+  };
+
+  const getRiskLabel = (riskScore: number | undefined) => {
+    if (!riskScore || isNaN(riskScore)) return 'Unknown';
+    if (riskScore >= 70) return 'High Risk';
+    if (riskScore >= 40) return 'Medium Risk';
+    return 'Low Risk';
   };
 
   const formatCurrency = (amount: number | undefined) => {
@@ -109,36 +136,52 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     return `$${amount.toLocaleString()}`;
   };
 
+  const getPriorityColor = (business: Business) => {
+    const signalScore = business.succession_risk_score || 0;
+    const leadScore = business.lead_score || 0;
+
+    if (signalScore > 70 && leadScore > 80) return 'bg-red-500';
+    if (signalScore > 40 || leadScore > 70) return 'bg-orange-500';
+    if (business.estimated_revenue && business.estimated_revenue > 2000000) return 'bg-green-500';
+    return 'bg-blue-500';
+  };
+
   if (mapError) {
     return (
-      <div className="w-full h-32 bg-gradient-to-br from-okapi-brown-50 to-okapi-brown-100 rounded-xl shadow-2xl flex items-center justify-center">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full h-96 bg-gradient-to-br from-red-50 to-pink-100 rounded-2xl shadow-xl border border-red-200 flex items-center justify-center"
+      >
         <div className="text-center">
-          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
           </div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">Map Loading Error</h3>
-          <p className="text-xs text-gray-600 mb-2">Unable to load the interactive map</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Map Loading Error</h3>
+          <p className="text-gray-600 mb-4">Unable to load the interactive map</p>
           <button 
             onClick={() => setMapError(false)}
-            className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             Try Again
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (!isMapLoaded || businessesWithCoords.length === 0) {
     return (
-      <div className="w-full h-32 bg-gradient-to-br from-okapi-brown-50 to-okapi-brown-100 rounded-xl shadow-2xl flex items-center justify-center">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full h-96 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-xl border border-blue-200 flex items-center justify-center"
+      >
         <div className="text-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-okapi-brown-600 mx-auto mb-2"></div>
-          <p className="text-okapi-brown-600 text-sm font-medium">Loading interactive map...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-blue-600 font-medium">Loading interactive map...</p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -147,35 +190,42 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const centerLng = businessesWithCoords[0]?.coordinates[1] || -122.4194;
 
   return (
-    <div className="w-full bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-200">
-      {/* Map Header */}
-      <div className="bg-white px-6 py-4 border-b border-gray-200">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200"
+    >
+      {/* Enhanced Map Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Interactive Map</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Interactive Market Map
+            </h3>
+            <p className="text-blue-100 text-sm mt-1">
               {businesses.length} businesses found in {location}
             </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-xs text-gray-600">Low Risk</span>
+              <span className="text-white text-xs">Low Risk</span>
             </div>
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span className="text-xs text-gray-600">Medium Risk</span>
+              <span className="text-white text-xs">Medium Risk</span>
             </div>
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="text-xs text-gray-600">High Risk</span>
+              <span className="text-white text-xs">High Risk</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Real Interactive Map */}
-      <div className="h-32 relative map-container" style={{ maxHeight: '128px', minHeight: '128px', overflow: 'hidden' }}>
+      {/* Enhanced Interactive Map */}
+      <div className="relative map-container" style={{ height: '500px', overflow: 'hidden' }}>
         <MapContainer
           center={[centerLat, centerLng]}
           zoom={12}
@@ -186,8 +236,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             top: 0,
             left: 0,
             zIndex: 1,
-            maxHeight: '128px',
-            minHeight: '128px'
           }}
           zoomControl={false}
         >
@@ -204,42 +252,57 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             <CircleMarker
               key={`${business.name}-${index}`}
               center={business.coordinates}
-              radius={8}
+              radius={12}
               fillColor={getRiskColor(business.succession_risk_score)}
               color="white"
-              weight={2}
-              opacity={0.8}
-              fillOpacity={0.7}
+              weight={3}
+              opacity={0.9}
+              fillOpacity={0.8}
               eventHandlers={{
-                click: () => onBusinessClick?.(business),
+                click: () => {
+                  setSelectedBusiness(business);
+                  onBusinessClick?.(business);
+                },
               }}
             >
               <Popup>
-                <div className="p-2 min-w-48">
-                  <h4 className="font-semibold text-gray-900 text-sm mb-1">{business.name}</h4>
-                  <p className="text-xs text-gray-600 mb-2">{business.address}</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
+                <div className="p-4 min-w-64">
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="font-bold text-gray-900 text-sm">{business.name}</h4>
+                    <div className={`w-3 h-3 rounded-full ${getPriorityColor(business)}`}></div>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-3 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {business.address}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="w-3 h-3 text-green-600" />
                       <span className="text-gray-500">Revenue:</span>
-                      <p className="font-medium text-gray-900">{formatCurrency(business.estimated_revenue)}</p>
+                      <span className="font-semibold text-gray-900">{formatCurrency(business.estimated_revenue)}</span>
                     </div>
-                    <div>
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3 h-3 text-blue-600" />
                       <span className="text-gray-500">Employees:</span>
-                      <p className="font-medium text-gray-900">{business.employee_count || 'N/A'}</p>
+                      <span className="font-semibold text-gray-900">{business.employee_count || 'N/A'}</span>
                     </div>
-                    <div>
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3 text-purple-600" />
                       <span className="text-gray-500">Lead Score:</span>
-                      <p className="font-medium text-gray-900">{business.lead_score || 'N/A'}%</p>
+                      <span className="font-semibold text-gray-900">{business.lead_score || 'N/A'}%</span>
                     </div>
-                    <div>
+                    <div className="flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-red-600" />
                       <span className="text-gray-500">Risk:</span>
-                      <p className="font-medium text-gray-900">
-                        {business.succession_risk_score ? 
-                          (business.succession_risk_score >= 70 ? 'High' : 
-                           business.succession_risk_score >= 40 ? 'Medium' : 'Low') : 'N/A'}
-                      </p>
+                      <span className="font-semibold text-gray-900">{getRiskLabel(business.succession_risk_score)}</span>
                     </div>
                   </div>
+                  {business.rating && (
+                    <div className="flex items-center gap-1 mt-2">
+                      <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                      <span className="text-xs text-gray-600">{business.rating} rating</span>
+                    </div>
+                  )}
                 </div>
               </Popup>
             </CircleMarker>
@@ -247,14 +310,84 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         </MapContainer>
       </div>
 
-      {/* Map Footer */}
-      <div className="bg-gray-50 px-6 py-3">
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>Click markers for business details</span>
-          <span>{businesses.length} businesses displayed</span>
+      {/* Enhanced Map Footer */}
+      <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-t border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600 flex items-center gap-1">
+              <Eye className="w-4 h-4" />
+              Click markers for business details
+            </span>
+            <span className="text-sm text-gray-600 flex items-center gap-1">
+              <Zap className="w-4 h-4" />
+              {businesses.length} businesses displayed
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            {selectedBusiness && (
+              <>
+                {selectedBusiness.phone && (
+                  <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
+                    <Phone className="w-4 h-4" />
+                  </button>
+                )}
+                {selectedBusiness.website && (
+                  <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
+                    <Globe className="w-4 h-4" />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Business Details Panel */}
+      <AnimatePresence>
+        {selectedBusiness && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute top-4 right-4 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-sm"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <h4 className="font-bold text-gray-900">{selectedBusiness.name}</h4>
+              <button 
+                onClick={() => setSelectedBusiness(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-gray-400" />
+                <span className="text-gray-600">{selectedBusiness.address}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500">Revenue</p>
+                  <p className="font-semibold text-green-600">{formatCurrency(selectedBusiness.estimated_revenue)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Employees</p>
+                  <p className="font-semibold text-gray-900">{selectedBusiness.employee_count || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Lead Score</p>
+                  <p className="font-semibold text-purple-600">{selectedBusiness.lead_score || 'N/A'}%</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Risk Level</p>
+                  <p className="font-semibold text-red-600">{getRiskLabel(selectedBusiness.succession_risk_score)}</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

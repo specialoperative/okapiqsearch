@@ -13,6 +13,9 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('');
   const [radiusMiles, setRadiusMiles] = useState(25);
+  const [minRevenue, setMinRevenue] = useState('');
+  const [maxRevenue, setMaxRevenue] = useState('');
+  const [ownerAge, setOwnerAge] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scanResults, setScanResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +57,10 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
         body: JSON.stringify({
           location: searchTerm,
           industry: selectedIndustry || 'hvac',
-          radius_miles: radiusMiles
+          radius_miles: radiusMiles,
+          min_revenue: minRevenue,
+          max_revenue: maxRevenue,
+          owner_age: ownerAge
         }),
       });
 
@@ -183,11 +189,11 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
             transition={{ delay: 0.3 }}
             className="bg-white rounded-2xl shadow-xl border border-okapi-brown-200 p-6 mb-8"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
               {/* Location Input */}
               <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-okapi-brown-700 mb-2">
-                  Location
+                  Location *
                 </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-okapi-brown-400" />
@@ -215,7 +221,7 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
               {/* Industry Selection */}
               <div>
                 <label className="block text-sm font-medium text-okapi-brown-700 mb-2">
-                  Industry
+                  Industry *
                 </label>
                 <select
                   value={selectedIndustry}
@@ -228,6 +234,53 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
                       {industry}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              {/* Min Revenue */}
+              <div>
+                <label className="block text-sm font-medium text-okapi-brown-700 mb-2">
+                  Min Revenue
+                </label>
+                <input
+                  type="text"
+                  value={minRevenue}
+                  onChange={(e) => setMinRevenue(e.target.value)}
+                  placeholder="$1M"
+                  className="w-full px-4 py-3 border border-okapi-brown-300 rounded-lg focus:ring-2 focus:ring-okapi-brown-500 focus:border-okapi-brown-500 transition-colors"
+                />
+              </div>
+
+              {/* Max Revenue */}
+              <div>
+                <label className="block text-sm font-medium text-okapi-brown-700 mb-2">
+                  Max Revenue
+                </label>
+                <input
+                  type="text"
+                  value={maxRevenue}
+                  onChange={(e) => setMaxRevenue(e.target.value)}
+                  placeholder="$10M"
+                  className="w-full px-4 py-3 border border-okapi-brown-300 rounded-lg focus:ring-2 focus:ring-okapi-brown-500 focus:border-okapi-brown-500 transition-colors"
+                />
+              </div>
+
+              {/* Owner Age */}
+              <div>
+                <label className="block text-sm font-medium text-okapi-brown-700 mb-2">
+                  Owner Age
+                </label>
+                <select
+                  value={ownerAge}
+                  onChange={(e) => setOwnerAge(e.target.value)}
+                  className="w-full px-4 py-3 border border-okapi-brown-300 rounded-lg focus:ring-2 focus:ring-okapi-brown-500 focus:border-okapi-brown-500 transition-colors"
+                >
+                  <option value="">Any age</option>
+                  <option value="under_30">Under 30</option>
+                  <option value="30_40">30-40</option>
+                  <option value="40_50">40-50</option>
+                  <option value="50_60">50-60</option>
+                  <option value="60_plus">60+</option>
                 </select>
               </div>
 
@@ -248,7 +301,8 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
                   ) : (
                     <div className="flex items-center justify-center space-x-2">
                       <Target className="w-5 h-5" />
-                      <span>Scan Market</span>
+-                      <span>Scan Market</span>
++                      <span>Start Market Scan</span>
                     </div>
                   )}
                 </motion.button>
@@ -256,7 +310,7 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
             </div>
 
             {/* Advanced Filters Toggle */}
-            <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -277,6 +331,7 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
                         ? 'bg-white text-okapi-brown-900 shadow-sm' 
                         : 'text-okapi-brown-600 hover:text-okapi-brown-800'
                     }`}
+                    aria-label="List View"
                   >
                     <Menu className="w-4 h-4" />
                   </button>
@@ -287,6 +342,7 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
                         ? 'bg-white text-okapi-brown-900 shadow-sm' 
                         : 'text-okapi-brown-600 hover:text-okapi-brown-800'
                     }`}
+                    aria-label="Map View"
                   >
                     <Map className="w-4 h-4" />
                   </button>
@@ -301,7 +357,7 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="mt-4"
+              className="mt-8 rounded-2xl shadow-lg border border-[#D6C6B8] p-4 bg-[#F6F0E9]"
             >
               <InteractiveMap 
                 businesses={scanResults?.businesses || []}
