@@ -46,6 +46,7 @@ type InteractiveMapProps = {
   businesses?: MapBusiness[];
   center?: [number, number];
   heightClassName?: string;
+  onBusinessClick?: (b: MapBusiness) => void;
 };
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
@@ -56,6 +57,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   ],
   center = [37.7749, -122.4194],
   heightClassName = "h-96",
+  onBusinessClick,
 }) => {
   return (
     <div className={`w-full ${heightClassName} border border-gray-200 rounded-lg overflow-hidden`}>
@@ -75,12 +77,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
           <Marker 
             key={business.id} 
             position={business.position as [number, number]}
+            eventHandlers={onBusinessClick ? { click: () => onBusinessClick(business) } : undefined}
           >
             <Popup>
               <div className="text-center p-2">
                 <h3 className="font-semibold text-gray-900">{business.name}</h3>
-                <p className="text-sm text-gray-600">{business.tam}</p>
-                <p className="text-sm text-gray-600">Score: {business.score}</p>
+                {business.tam && <p className="text-sm text-gray-600">{business.tam}</p>}
+                {typeof business.score === 'number' && <p className="text-sm text-gray-600">Score: {business.score}</p>}
               </div>
             </Popup>
           </Marker>

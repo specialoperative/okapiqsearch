@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Search, TrendingUp, Users, Building2, Target, Zap, BarChart3, Filter, MapPin, DollarSign, Calendar, Star, Phone, Mail, ExternalLink, AlertCircle, CheckCircle, Map, Globe, Database, Shield, Activity, Menu } from 'lucide-react';
 import InteractiveMap from './interactive-map';
@@ -24,6 +24,23 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
   const [recentScans, setRecentScans] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
+  const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
+  // Geolocate on mount to preset map center
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('geolocation' in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (typeof lat === 'number' && typeof lng === 'number') {
+          setUserCenter([Number(lat.toFixed(5)), Number(lng.toFixed(5))]);
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  }, []);
 
   const industries = [
     'HVAC', 'Plumbing', 'Electrical', 'Landscaping', 'Restaurant', 
@@ -49,7 +66,7 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
     setSuccess(null);
 
     try {
-      const response = await fetch('http://localhost:8000/market/scan', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/intelligence/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,9 +75,7 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
           location: searchTerm,
           industry: selectedIndustry || 'hvac',
           radius_miles: radiusMiles,
-          min_revenue: minRevenue,
-          max_revenue: maxRevenue,
-          owner_age: ownerAge
+          max_businesses: 50
         }),
       });
 
@@ -360,10 +375,21 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
               className="mt-8 rounded-2xl shadow-lg border border-[#D6C6B8] p-4 bg-[#F6F0E9]"
             >
               <InteractiveMap 
-                businesses={scanResults?.businesses || []}
-                location={searchTerm}
-                industry={selectedIndustry || 'hvac'}
+                businesses={(scanResults?.businesses || []).map((b:any, i:number)=>{
+                  const lat = b?.location?.lat ?? b?.lat ?? b?.coordinates?.lat;
+                  const lng = b?.location?.lng ?? b?.lng ?? b?.coordinates?.lng;
+                  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+                  return {
+                    id: b.business_id || b.id || i,
+                    name: b.name || b.business_name || 'Business',
+                    position: [lat, lng] as [number, number],
+                    tam: b?.metrics?.tam_estimate ? `$${Number(b.metrics.tam_estimate).toLocaleString()}` : undefined,
+                    score: b?.analysis?.lead_score?.overall_score ?? b?.scores?.overall
+                  };
+                }).filter(Boolean)}
+                center={(scanResults?.center && typeof scanResults.center.lat==='number' && typeof scanResults.center.lng==='number') ? [scanResults.center.lat, scanResults.center.lng] : userCenter}
                 onBusinessClick={handleBusinessClick}
+                heightClassName="h-[520px]"
               />
             </motion.div>
           )}
