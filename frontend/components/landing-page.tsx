@@ -2,12 +2,15 @@
 
 import React, { useState } from "react";
 import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
+import dynamic from 'next/dynamic';
+
+const InteractiveMap = dynamic(() => import('./interactive-map'), { ssr: false });
 
 const navLinks = [
   { name: "How it Works", href: "#" },
   { name: "Products", href: "#" },
   { name: "Pricing", href: "#" },
-  { name: "CRM", href: "#" },
+  { name: "CRM", href: "?page=crm" },
 ];
 
 const businesses = [
@@ -18,6 +21,12 @@ const businesses = [
 
 export default function LandingPage() {
   const [query, setQuery] = useState("");
+
+  const navigate = (page: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', page);
+    window.history.pushState({}, '', url.toString());
+  };
 
   return (
     <div className="min-h-screen bg-[#fcfbfa] text-gray-900">
@@ -36,7 +45,7 @@ export default function LandingPage() {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <button className="hidden md:inline-flex items-center px-4 py-2 rounded-lg font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition">
+            <button className="hidden md:inline-flex items-center px-4 py-2 rounded-lg font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition" onClick={() => navigate('crm')}>
               Sign In
             </button>
             <button className="md:hidden p-2 rounded-lg hover:bg-gray-100" aria-label="Open menu">
@@ -67,6 +76,7 @@ export default function LandingPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              navigate('market-scanner');
             }}
             className="flex flex-col sm:flex-row gap-4 mb-5"
           >
@@ -96,10 +106,10 @@ export default function LandingPage() {
 
           {/* Secondary actions */}
           <div className="flex flex-col sm:flex-row gap-3 mb-5">
-            <button className="flex items-center justify-center gap-2 flex-1 border border-gray-300 px-5 py-2.5 rounded-full font-semibold text-gray-800 bg-white hover:bg-gray-50 transition">
+            <button className="flex items-center justify-center gap-2 flex-1 border border-gray-300 px-5 py-2.5 rounded-full font-semibold text-gray-800 bg-white hover:bg-gray-50 transition" onClick={() => navigate('market-scanner')}>
               Try Free Demo
             </button>
-            <button className="flex items-center justify-center gap-2 flex-1 border border-gray-300 px-5 py-2.5 rounded-full font-semibold text-gray-800 bg-white hover:bg-gray-50 transition">
+            <button className="flex items-center justify-center gap-2 flex-1 border border-gray-300 px-5 py-2.5 rounded-full font-semibold text-gray-800 bg-white hover:bg-gray-50 transition" onClick={() => navigate('crm')}>
               Open CRM
             </button>
           </div>
@@ -138,12 +148,19 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <button className="mt-5 w-full bg-[#402f23] text-white font-semibold py-3 rounded-xl shadow hover:bg-[#594733] transition">
+            <button className="mt-5 w-full bg-[#402f23] text-white font-semibold py-3 rounded-xl shadow hover:bg-[#594733] transition" onClick={() => navigate('market-scanner')}>
               Open Full Intelligence Suite
             </button>
           </div>
         </aside>
       </main>
+
+      {/* Map Section */}
+      <section className="max-w-7xl mx-auto px-6 -mt-6">
+        <div className="rounded-2xl overflow-hidden shadow border border-gray-100">
+          <InteractiveMap heightClassName="h-[420px]" />
+        </div>
+      </section>
 
       {/* Three-Product Ecosystem Section */}
       <section className="max-w-7xl mx-auto px-6 py-16">

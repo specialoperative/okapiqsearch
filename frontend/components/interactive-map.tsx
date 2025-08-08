@@ -34,36 +34,33 @@ const Popup = dynamic(
   { ssr: false }
 );
 
-// Business data with coordinates in San Francisco
-const businesses = [
-  {
-    id: 1,
-    name: "Golden Gate HVAC",
-    position: [37.7749, -122.4194], // San Francisco center
-    tam: "$12M TAM",
-    score: 92
-  },
-  {
-    id: 2,
-    name: "Bay Area Plumbing Co", 
-    position: [37.7849, -122.4094], // Slightly north
-    tam: "$8M TAM",
-    score: 88
-  },
-  {
-    id: 3,
-    name: "SF Electrical Services",
-    position: [37.7649, -122.4294], // Slightly south
-    tam: "$15M TAM", 
-    score: 85
-  }
-];
+export type MapBusiness = {
+  id: string | number;
+  name: string;
+  position: [number, number];
+  tam?: string;
+  score?: number;
+};
 
-const InteractiveMap: React.FC = () => {
+type InteractiveMapProps = {
+  businesses?: MapBusiness[];
+  center?: [number, number];
+  heightClassName?: string;
+};
+
+const InteractiveMap: React.FC<InteractiveMapProps> = ({
+  businesses = [
+    { id: 1, name: "Golden Gate HVAC", position: [37.7749, -122.4194], tam: "$12M TAM", score: 92 },
+    { id: 2, name: "Bay Area Plumbing Co", position: [37.7849, -122.4094], tam: "$8M TAM", score: 88 },
+    { id: 3, name: "SF Electrical Services", position: [37.7649, -122.4294], tam: "$15M TAM", score: 85 },
+  ],
+  center = [37.7749, -122.4194],
+  heightClassName = "h-96",
+}) => {
   return (
-    <div className="w-full h-96 border border-gray-200 rounded-lg overflow-hidden">
+    <div className={`w-full ${heightClassName} border border-gray-200 rounded-lg overflow-hidden`}>
       <MapContainer
-        center={[37.7749, -122.4194]}
+        center={center}
         zoom={13}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={false}
