@@ -39,7 +39,7 @@ export default function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'landing':
-        return <LandingPage />;
+        return <LandingPage onNavigate={handleNavigate} />;
       case 'how-it-works':
         return (
           <div className="max-w-5xl mx-auto px-6 py-16">

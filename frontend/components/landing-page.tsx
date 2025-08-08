@@ -19,7 +19,9 @@ const businesses = [
   { name: "SF Electrical Services", tam: "$15M TAM", score: 85 },
 ];
 
-export default function LandingPage() {
+type LandingPageProps = { onNavigate?: (page: string) => void };
+
+export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [query, setQuery] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [mapBusinesses, setMapBusinesses] = useState<{ id: string|number; name: string; position: [number,number]; tam?: string; score?: number; }[]>([]);
@@ -31,6 +33,7 @@ export default function LandingPage() {
     const url = new URL(window.location.href);
     url.searchParams.set('page', page);
     window.history.pushState({}, '', url.toString());
+    onNavigate?.(page);
   };
 
   const computedCenter = useMemo(() => {
@@ -124,7 +127,7 @@ export default function LandingPage() {
                 {link.name}
               </button>
             ))}
-          </nav>
+            </nav>
           <div className="flex items-center gap-2">
             <button className="hidden md:inline-flex items-center px-4 py-2 rounded-lg font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition" onClick={() => navigate('signin')}>
               Sign In
