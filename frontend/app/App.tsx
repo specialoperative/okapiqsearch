@@ -12,7 +12,7 @@ import CRMPage from '../components/crm-page';
 type Page = 'landing' | 'dashboard' | 'solutions' | 'case-studies' | 'market-analysis' | 'market-scanner' | 'crm';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('market-scanner');
+  const [currentPage, setCurrentPage] = useState<Page>('landing');
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page as Page);
@@ -21,7 +21,7 @@ export default function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'landing':
-        return <LandingPage onNavigate={handleNavigate} />;
+        return <LandingPage />;
       case 'dashboard':
         return <Dashboard onNavigate={handleNavigate} />;
       case 'solutions':
@@ -35,7 +35,7 @@ export default function App() {
       case 'crm':
         return <CRMPage onNavigate={handleNavigate} />;
       default:
-        return <LandingPage onNavigate={handleNavigate} />;
+        return <LandingPage />;
     }
   };
 

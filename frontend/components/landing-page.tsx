@@ -4,25 +4,20 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import dynamic from 'next/dynamic';
 
-// Dynamically import Leaflet components to avoid SSR issues
-const MapContainer = dynamic(
-  () => import('react-leaflet').then((mod) => mod.MapContainer),
-  { ssr: false }
-);
-
-const TileLayer = dynamic(
-  () => import('react-leaflet').then((mod) => mod.TileLayer),
-  { ssr: false }
-);
-
-const Marker = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Marker),
-  { ssr: false }
-);
-
-const Popup = dynamic(
-  () => import('react-leaflet').then((mod) => mod.Popup),
-  { ssr: false }
+// Dynamically import the entire map component to avoid SSR issues
+const MapView = dynamic(
+  () => import('./MapView'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+        <div className="text-center">
+          <div className="animate-pulse rounded-full h-8 w-8 bg-gray-300 dark:bg-gray-600 mx-auto mb-2"></div>
+          <p className="text-gray-500 dark:text-gray-400">Loading map...</p>
+        </div>
+      </div>
+    )
+  }
 );
 
 const locations = [
@@ -171,7 +166,7 @@ const LandingPage: React.FC = () => {
                   className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   onClick={() => alert("Demo requested")}
                 >
-                  ▶️ Try Free Demo
+                  <span className="text-sm">▶️</span> Try Free Demo
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -179,7 +174,7 @@ const LandingPage: React.FC = () => {
                   className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   onClick={() => alert("Opening CRM")}
                 >
-                  📊 Open CRM
+                  <span className="text-sm">📊</span> Open CRM
                 </motion.button>
               </motion.div>
 
@@ -265,31 +260,7 @@ const LandingPage: React.FC = () => {
             <div className="max-w-4xl mx-auto">
               <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
                 <div className="h-96 relative">
-                  {typeof window !== 'undefined' && (
-                    <MapContainer
-                      center={[37.7749, -122.4194]}
-                      zoom={12}
-                      scrollWheelZoom={false}
-                      className="h-full w-full"
-                      style={{ borderRadius: '1rem' }}
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      {locations.map(({ name, tam, position }) => (
-                        <Marker key={name} position={position as [number, number]}>
-                          <Popup>
-                            <div className="text-center">
-                              <strong className="text-gray-900">{name}</strong>
-                              <br />
-                              <span className="text-gray-600">{tam}</span>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      ))}
-                    </MapContainer>
-                  )}
+                  <MapView locations={locations} />
                 </div>
               </div>
             </div>
@@ -341,7 +312,7 @@ const LandingPage: React.FC = () => {
                 whileHover={{ y: -5 }}
                 className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 p-6 text-center hover:shadow-xl transition-all duration-300"
               >
-                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${color} mb-4 text-2xl`}>
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${color} mb-4 text-lg`}>
                   {icon}
                 </div>
                 <h3 className={`text-lg font-semibold mb-2 ${textColor}`}>{title}</h3>
