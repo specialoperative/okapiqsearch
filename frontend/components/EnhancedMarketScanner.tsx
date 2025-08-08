@@ -113,7 +113,7 @@ const EnhancedMarketScanner: React.FC<EnhancedMarketScannerProps> = ({ onNavigat
 
     setIsScanning(true);
     try {
-      const response = await fetch('http://localhost:8000/market/scan', {
+      const response = await fetch('http://localhost:8000/intelligence/scan', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -121,7 +121,8 @@ const EnhancedMarketScanner: React.FC<EnhancedMarketScannerProps> = ({ onNavigat
         body: JSON.stringify({
           location: location.trim(),
           industry: industry.trim() || null,
-          radius_miles: filters.locationRadius
+          radius_miles: filters.locationRadius,
+          max_businesses: 50
         }),
       });
 
@@ -234,19 +235,19 @@ const EnhancedMarketScanner: React.FC<EnhancedMarketScannerProps> = ({ onNavigat
                 </div>
                 Real-time Data
               </h3>
-            </div>
+        </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     Location *
-                  </label>
+                </label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
                       placeholder="Enter city, state, or zip"
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
@@ -295,15 +296,15 @@ const EnhancedMarketScanner: React.FC<EnhancedMarketScannerProps> = ({ onNavigat
                     type="text"
                     defaultValue="$1M"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
+                />
+              </div>
                 
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     Max Revenue
-                  </label>
-                  <input
-                    type="text"
+                </label>
+                <input
+                  type="text"
                     defaultValue="$10M"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
@@ -325,21 +326,21 @@ const EnhancedMarketScanner: React.FC<EnhancedMarketScannerProps> = ({ onNavigat
                 
                 <div className="flex gap-3">
                   <button
-                    onClick={handleScan}
-                    disabled={isScanning || !location.trim()}
+                  onClick={handleScan}
+                  disabled={isScanning || !location.trim()}
                     className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isScanning ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Scanning...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
+                >
+                  {isScanning ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Scanning...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
                         <Target className="h-4 w-4" />
-                        Scan Market
-                      </div>
-                    )}
+                      Scan Market
+                    </div>
+                  )}
                   </button>
                   
                   <button className="px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">

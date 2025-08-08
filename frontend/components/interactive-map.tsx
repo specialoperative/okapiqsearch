@@ -151,7 +151,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full h-96 bg-gradient-to-br from-red-50 to-pink-100 rounded-2xl shadow-xl border border-red-200 flex items-center justify-center"
+        className="w-full h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center"
       >
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -175,7 +175,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full h-96 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-xl border border-blue-200 flex items-center justify-center"
+        className="w-full h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center"
       >
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -190,48 +190,16 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const centerLng = businessesWithCoords[0]?.coordinates[1] || -122.4194;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200"
-    >
-      {/* Enhanced Map Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              Interactive Market Map
-            </h3>
-            <p className="text-blue-100 text-sm mt-1">
-              {businesses.length} businesses found in {location}
-            </p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-white text-xs">Low Risk</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span className="text-white text-xs">Medium Risk</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span className="text-white text-xs">High Risk</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Interactive Map */}
-      <div className="relative map-container" style={{ height: '500px', overflow: 'hidden' }}>
+    <div className="w-full h-screen bg-white">
+      {/* Full-screen map with overlay controls */}
+      <div className="relative w-full h-full">
+        {/* Main Map - Full Screen */}
         <MapContainer
           center={[centerLat, centerLng]}
           zoom={12}
           style={{ 
-            height: '100%', 
-            width: '100%',
+            height: '100vh', 
+            width: '100vw',
             position: 'absolute',
             top: 0,
             left: 0,
@@ -252,7 +220,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             <CircleMarker
               key={`${business.name}-${index}`}
               center={business.coordinates}
-              radius={12}
+              radius={15}
               fillColor={getRiskColor(business.succession_risk_score)}
               color="white"
               weight={3}
@@ -308,86 +276,123 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             </CircleMarker>
           ))}
         </MapContainer>
-      </div>
 
-      {/* Enhanced Map Footer */}
-      <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-t border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600 flex items-center gap-1">
-              <Eye className="w-4 h-4" />
-              Click markers for business details
-            </span>
-            <span className="text-sm text-gray-600 flex items-center gap-1">
-              <Zap className="w-4 h-4" />
-              {businesses.length} businesses displayed
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            {selectedBusiness && (
-              <>
-                {selectedBusiness.phone && (
-                  <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
-                    <Phone className="w-4 h-4" />
-                  </button>
-                )}
-                {selectedBusiness.website && (
-                  <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
-                    <Globe className="w-4 h-4" />
-                  </button>
-                )}
-              </>
-            )}
+        {/* Overlay Header */}
+        <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
+                  Interactive Market Map
+                </h3>
+                <p className="text-gray-600 text-sm mt-1">
+                  {businesses.length} businesses found in {location}
+                </p>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-gray-700 text-xs font-medium">Low Risk</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <span className="text-gray-700 text-xs font-medium">Medium Risk</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-gray-700 text-xs font-medium">High Risk</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Business Details Panel */}
-      <AnimatePresence>
-        {selectedBusiness && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="absolute top-4 right-4 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-sm"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <h4 className="font-bold text-gray-900">{selectedBusiness.name}</h4>
-              <button 
-                onClick={() => setSelectedBusiness(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <MapPin className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-600">{selectedBusiness.address}</span>
+        {/* Overlay Footer */}
+        <div className="absolute bottom-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-t border-gray-200">
+          <div className="px-6 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-6">
+                <span className="text-sm text-gray-600 flex items-center gap-1">
+                  <Eye className="w-4 h-4" />
+                  Click markers for business details
+                </span>
+                <span className="text-sm text-gray-600 flex items-center gap-1">
+                  <Zap className="w-4 h-4" />
+                  {businesses.length} businesses displayed
+                </span>
+                <span className="text-sm text-gray-600 flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  Found {businesses.length} businesses in {location}
+                </span>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500">Revenue</p>
-                  <p className="font-semibold text-green-600">{formatCurrency(selectedBusiness.estimated_revenue)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Employees</p>
-                  <p className="font-semibold text-gray-900">{selectedBusiness.employee_count || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Lead Score</p>
-                  <p className="font-semibold text-purple-600">{selectedBusiness.lead_score || 'N/A'}%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Risk Level</p>
-                  <p className="font-semibold text-red-600">{getRiskLabel(selectedBusiness.succession_risk_score)}</p>
-                </div>
+              <div className="flex items-center space-x-2">
+                {selectedBusiness && (
+                  <>
+                    {selectedBusiness.phone && (
+                      <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
+                        <Phone className="w-4 h-4" />
+                      </button>
+                    )}
+                    {selectedBusiness.website && (
+                      <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
+                        <Globe className="w-4 h-4" />
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+          </div>
+        </div>
+
+        {/* Business Details Panel */}
+        <AnimatePresence>
+          {selectedBusiness && (
+            <motion.div
+              initial={{ opacity: 0, x: 300 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 300 }}
+              className="absolute top-20 right-4 z-20 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-sm"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <h4 className="font-bold text-gray-900">{selectedBusiness.name}</h4>
+                <button 
+                  onClick={() => setSelectedBusiness(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-600">{selectedBusiness.address}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Revenue</p>
+                    <p className="font-semibold text-green-600">{formatCurrency(selectedBusiness.estimated_revenue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Employees</p>
+                    <p className="font-semibold text-gray-900">{selectedBusiness.employee_count || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Lead Score</p>
+                    <p className="font-semibold text-purple-600">{selectedBusiness.lead_score || 'N/A'}%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Risk Level</p>
+                    <p className="font-semibold text-red-600">{getRiskLabel(selectedBusiness.succession_risk_score)}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 };
 

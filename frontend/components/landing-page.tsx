@@ -46,362 +46,9 @@ const locations = [
   },
 ];
 
-const LandingPage: React.FC = () => {
-  const [query, setQuery] = useState("");
-
-  // For dark mode toggle simulation (light only here for simplicity)
-  const [darkMode, setDarkMode] = useState(false);
-
-  return (
-    <div className={darkMode ? "dark" : ""}>
-      <div className="min-h-screen bg-[#fefbf9] dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100 font-sans">
-        {/* Navigation */}
-        <nav className="flex justify-between items-center px-8 py-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            {/* Logo placeholder */}
-            <div className="w-10 h-10 bg-green-400 rounded flex items-center justify-center font-bold text-white select-none cursor-default" aria-label="Okapiq logo">
-              OQ
-            </div>
-            <span className="font-semibold text-lg tracking-wide select-none cursor-default">Okapiq</span>
-          </div>
-          <ul className="hidden md:flex space-x-8 text-sm font-medium">
-            {["How it Works", "Products", "Pricing", "CRM"].map((item) => (
-              <li key={item} className="hover:text-green-700 cursor-pointer transition-colors duration-200">
-                {item}
-              </li>
-            ))}
-          </ul>
-          <div className="flex items-center space-x-4">
-            <button
-              className="hidden md:inline-block px-5 py-2 border border-gray-400 dark:border-gray-600 rounded-full text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              aria-label="Sign in"
-            >
-              Sign In
-            </button>
-            <button
-              aria-label="Toggle dark mode"
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-              title={darkMode ? "Light Mode" : "Dark Mode"}
-            >
-              {darkMode ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-yellow-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M7.05 16.95l-.707.707M16.95 16.95l-.707-.707M7.05 7.05l-.707-.707"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-gray-900 dark:text-gray-100"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
-        </nav>
-
-        {/* Hero Section */}
-        <section className="max-w-7xl mx-auto px-6 lg:px-12 pt-14 md:pt-20 flex flex-col md:flex-row gap-16 items-start">
-          {/* Left Text Area */}
-          <div className="max-w-xl flex flex-col gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <span className="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold text-xs mb-3 select-none">
-                Bloomberg for Small Businesses
-              </span>
-              <h1 className="text-5xl md:text-6xl font-extrabold leading-tight tracking-tight max-w-[28rem]">
-                Find and qualify SMB deals{" "}
-                <span className="text-olive-700 dark:text-olive-400 font-extrabold">before</span>{" "}
-                <br />
-                <span className="text-green-700 dark:text-green-400 font-extrabold">anyone else</span>
-              </h1>
-              <p className="mt-4 text-gray-700 dark:text-gray-300 max-w-xl leading-relaxed">
-                AI-powered deal sourcing from public data, owner signals, and market intelligence. Get CRM-ready leads with TAM/SAM estimates and ad spend analysis while competitors are still cold calling.
-              </p>
-            </motion.div>
-
-            {/* Search and Buttons */}
-            <motion.form
-              onSubmit={(e) => {
-                e.preventDefault();
-                alert(`Scanning market for "${query}" (demo only)`);
-              }}
-              className="flex flex-col sm:flex-row gap-4 mt-6"
-            >
-              <input
-                type="text"
-                placeholder="Enter a city, ZIP, or industry..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="flex-grow rounded-lg border border-gray-300 px-5 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-white dark:text-gray-900"
-                aria-label="Market scan input"
-                required
-              />
-              <motion.button
-                type="submit"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-[#402f23] text-white px-8 py-3 rounded-lg whitespace-nowrap font-semibold shadow-lg hover:bg-[#594733] transition-colors"
-                aria-label="Scan Market"
-              >
-                Scan Market
-              </motion.button>
-            </motion.form>
-
-            {/* Secondary buttons */}
-            <div className="flex flex-wrap gap-4 mt-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-3 border border-gray-300 px-6 py-3 rounded-lg text-gray-900 bg-white hover:bg-gray-100 font-semibold shadow-md transition"
-                aria-label="Try Free Demo"
-                onClick={() => alert("Demo requested (demo only)")}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-6.586-3.79A1 1 0 007 8.237v7.525a1 1 0 001.166.986l6.586-1.66a1 1 0 000-1.852z" />
-                </svg>
-                Try Free Demo
-              </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-3 border border-gray-300 px-6 py-3 rounded-lg text-gray-900 bg-white hover:bg-gray-100 font-semibold shadow-md transition"
-                aria-label="Open CRM"
-                onClick={() => alert("Opening CRM (demo only)")}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h18M3 11h18M3 15h18M3 19h18" />
-                </svg>
-                Open CRM
-              </motion.button>
-            </div>
-
-            {/* Trust icons or checklist */}
-            <div className="flex flex-wrap gap-6 text-green-600 text-sm mt-6 font-semibold">
-              <div className="flex items-center gap-2">
-                <CheckMarkIcon />
-                No setup required
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckMarkIcon />
-                Instant lead export
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckMarkIcon />
-                14-day free trial
-              </div>
-            </div>
-          </div>
-
-          {/* Right Section: Market Intelligence + Map */}
-          <div className="flex flex-col gap-12">
-            {/* Market Intelligence Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8"
-              style={{filter: "drop-shadow(0 10px 20px rgba(64,47,35,0.15))"}}
-            >
-              <div className="text-sm text-gray-600 font-semibold mb-4 flex items-center justify-between">
-                <span>Market Intelligence - San Francisco Bay Area</span>
-                <span className="border border-gray-300 px-3 py-1 rounded-full text-xs">TAM: $2.4B</span>
-              </div>
-              <ul className="divide-y divide-gray-300 text-gray-900">
-                {locations.map(({ name, tam, score }) => (
-                  <li
-                    key={name}
-                    className="flex justify-between items-center py-4"
-                  >
-                    <div>
-                      <div className="font-semibold">{name}</div>
-                      <div className="text-xs text-gray-500">{tam}</div>
-                    </div>
-                    <span
-                      className={`px-4 py-1 rounded-full text-xs font-semibold ${score > 90 ? "bg-red-600 text-white" : "bg-gray-300 text-gray-700"}`}
-                    >
-                      {score}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                className="w-full mt-8 py-3 rounded-xl font-semibold bg-[#402f23] text-white hover:bg-[#593f30] transition-shadow shadow-2xl"
-                aria-label="Open Full Intelligence Suite"
-                onClick={() => alert("Opening Full Intelligence Suite (demo only)")}
-              >
-                Open Full Intelligence Suite
-              </button>
-            </motion.div>
-
-            {/* Interactive Map - San Francisco */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.7 }}
-              className="h-80 md:h-96 rounded-2xl shadow-xl overflow-hidden max-w-md w-full bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center"
-            >
-              <MapContainer
-                center={[37.7749, -122.4194]}
-                zoom={12}
-                scrollWheelZoom={false}
-                className="h-full w-full"
-                aria-label="Interactive map of San Francisco"
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {locations.map(({ name, tam, position }) => (
-                  <Marker key={name} position={position}>
-                    <Popup>
-                      <strong>{name}</strong>
-                      <br />
-                      {tam}
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Ecosystem Section */}
-        <section className="max-w-5xl mx-auto px-6 lg:px-12 mt-24 text-center">
-          <h2 className="text-2xl font-bold mb-2 text-gray-900">
-            Three-Product Ecosystem for Complete Deal Sourcing
-          </h2>
-          <p className="text-gray-700 max-w-3xl mx-auto">
-            From identifying opportunities to closing deals – our integrated product line covers every step of the acquisition process.
-          </p>
-          {/* Placeholder product cards */}
-          <div className="mt-12 flex flex-col md:flex-row gap-8 justify-center">
-            {[
-              {
-                title: "Opportunity Finder",
-                desc: "Discover new SMB deals in your market with AI-driven insights.",
-                color: "bg-green-100 text-green-800",
-                icon: (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-10 w-10"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M21 21l-4.35-4.35m.15-4.65a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                ),
-              },
-              {
-                title: "CRM Integration",
-                desc: "Seamlessly export qualified leads to your CRM system.",
-                color: "bg-blue-100 text-blue-800",
-                icon: (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-10 w-10"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3 7h18M3 11h18M3 15h18M3 19h18"
-                    />
-                  </svg>
-                ),
-              },
-              {
-                title: "Market Analytics",
-                desc: "Analyze TAM/SAM and competitor ad spend for smarter decisions.",
-                color: "bg-yellow-100 text-yellow-800",
-                icon: (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-10 w-10"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M11 3v18m-4-4h8"
-                    />
-                  </svg>
-                ),
-              },
-            ].map(({ title, desc, color, icon }) => (
-              <div
-                key={title}
-                className={`flex flex-col gap-4 p-6 rounded-2xl shadow-lg max-w-xs mx-auto ${color} bg-opacity-30`}
-              >
-                <div>{icon}</div>
-                <h3 className="font-semibold text-lg text-gray-900">{title}</h3>
-                <p className="text-sm text-gray-700">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-};
-
 const CheckMarkIcon = () => (
   <svg
-    className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0"
+    className="w-4 h-4 text-green-600 flex-shrink-0"
     fill="none"
     stroke="currentColor"
     strokeWidth={3}
@@ -414,4 +61,298 @@ const CheckMarkIcon = () => (
   </svg>
 );
 
-export default LandingPage; 
+const LandingPage: React.FC = () => {
+  const [query, setQuery] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
+
+  return (
+    <div className={darkMode ? "dark" : ""}>
+      <div className="min-h-screen bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100 font-sans">
+        {/* Navigation */}
+        <nav className="flex justify-between items-center px-8 py-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            {/* Logo - Orange gradient circle with "O" */}
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+              O
+            </div>
+            <span className="font-bold text-xl tracking-tight text-black dark:text-white">Okapiq</span>
+          </div>
+          <ul className="hidden md:flex space-x-8 text-sm font-medium text-gray-600 dark:text-gray-300">
+            {["How it Works", "Products", "Pricing", "CRM"].map((item) => (
+              <li key={item} className="hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors duration-200">
+                {item}
+              </li>
+            ))}
+          </ul>
+          <div className="flex items-center space-x-4">
+            <button className="hidden md:inline-block px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition">
+              Sign In
+            </button>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition text-lg"
+            >
+              {darkMode ? "☀️" : "🌙"}
+            </button>
+          </div>
+        </nav>
+
+        {/* Hero Section */}
+        <div className="max-w-6xl mx-auto px-8 py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+            {/* Left Column - Main Content */}
+            <div className="space-y-8">
+              {/* Badge */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  💼 Bloomberg for Small Businesses
+                </span>
+              </motion.div>
+
+              {/* Main Headline */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                className="space-y-4"
+              >
+                <h1 className="text-5xl lg:text-6xl font-bold leading-tight text-black dark:text-white">
+                  Find and qualify<br />
+                  <span className="bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
+                    SMB deals before<br />
+                    anyone else
+                  </span>
+                </h1>
+                <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed max-w-lg">
+                  AI-powered deal sourcing from public data, owner signals, and market intelligence. Get CRM-ready leads with TAM/SAM estimates and ad spend analysis while competitors are still cold calling.
+                </p>
+              </motion.div>
+
+              {/* Search Bar */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="flex gap-3"
+              >
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    placeholder="Enter a city, ZIP, or industry..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white font-semibold rounded-lg hover:from-amber-700 hover:to-amber-800 transition-all duration-200 shadow-lg"
+                  onClick={() => alert(`Scanning market for "${query}"`)}
+                >
+                  Scan Market
+                </motion.button>
+              </motion.div>
+
+              {/* Action Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="flex gap-4"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  onClick={() => alert("Demo requested")}
+                >
+                  ▶️ Try Free Demo
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  onClick={() => alert("Opening CRM")}
+                >
+                  📊 Open CRM
+                </motion.button>
+              </motion.div>
+
+              {/* Features List */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.5 }}
+                className="flex flex-wrap gap-6 text-sm font-medium text-emerald-600 dark:text-emerald-400"
+              >
+                <div className="flex items-center gap-2">
+                  <CheckMarkIcon />
+                  No setup required
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckMarkIcon />
+                  Instant lead export
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckMarkIcon />
+                  14-day free trial
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Right Column - Market Intelligence Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="lg:ml-8"
+            >
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 p-6 max-w-md mx-auto">
+                {/* Card Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Market Intelligence - San Francisco Bay Area</h3>
+                  </div>
+                  <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full">
+                    TAM: $2.4B
+                  </span>
+                </div>
+
+                {/* Business List */}
+                <div className="space-y-4 mb-6">
+                  {locations.map(({ name, tam, score }) => (
+                    <div key={name} className="flex items-center justify-between py-2">
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white text-sm">{name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{tam}</div>
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          score > 90 
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" 
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                        }`}
+                      >
+                        {score}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* CTA Button */}
+                <button
+                  className="w-full py-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white font-semibold rounded-lg hover:from-amber-700 hover:to-amber-800 transition-all duration-200 shadow-lg"
+                  onClick={() => alert("Opening Full Intelligence Suite")}
+                >
+                  Open Full Intelligence Suite
+                </button>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Interactive Map Section - Below the main content */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="mt-16"
+          >
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                <div className="h-96 relative">
+                  {typeof window !== 'undefined' && (
+                    <MapContainer
+                      center={[37.7749, -122.4194]}
+                      zoom={12}
+                      scrollWheelZoom={false}
+                      className="h-full w-full"
+                      style={{ borderRadius: '1rem' }}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      {locations.map(({ name, tam, position }) => (
+                        <Marker key={name} position={position as [number, number]}>
+                          <Popup>
+                            <div className="text-center">
+                              <strong className="text-gray-900">{name}</strong>
+                              <br />
+                              <span className="text-gray-600">{tam}</span>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Three-Product Ecosystem Section */}
+        <motion.section
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.8 }}
+          className="max-w-6xl mx-auto px-8 py-16"
+        >
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              Three-Product Ecosystem for Complete Deal Sourcing
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+              From identifying opportunities to closing deals – our integrated product line covers every step of the acquisition process.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Opportunity Finder",
+                desc: "Discover new SMB deals in your market with AI-driven insights.",
+                color: "bg-emerald-50 dark:bg-emerald-900/20",
+                textColor: "text-emerald-700 dark:text-emerald-300",
+                icon: "🔍",
+              },
+              {
+                title: "CRM Integration", 
+                desc: "Seamlessly export qualified leads to your CRM system.",
+                color: "bg-blue-50 dark:bg-blue-900/20",
+                textColor: "text-blue-700 dark:text-blue-300",
+                icon: "📊",
+              },
+              {
+                title: "Market Analytics",
+                desc: "Analyze TAM/SAM and competitor ad spend for smarter decisions.",
+                color: "bg-amber-50 dark:bg-amber-900/20", 
+                textColor: "text-amber-700 dark:text-amber-300",
+                icon: "📈",
+              },
+            ].map(({ title, desc, color, textColor, icon }) => (
+              <motion.div
+                key={title}
+                whileHover={{ y: -5 }}
+                className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800 p-6 text-center hover:shadow-xl transition-all duration-300"
+              >
+                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${color} mb-4 text-2xl`}>
+                  {icon}
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 ${textColor}`}>{title}</h3>
+                <p className="text-gray-600 dark:text-gray-300">{desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+      </div>
+    </div>
+  );
+};
+
+export default LandingPage;
