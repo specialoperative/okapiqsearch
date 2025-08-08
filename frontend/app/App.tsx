@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import LandingPage from '../components/landing-page';
 import Dashboard from '../components/dashboard';
 import SolutionsPage from '../components/solutions-page';
@@ -37,13 +38,32 @@ export default function App() {
   };
 
   const renderPage = () => {
+    const BackHeader = ({ title }: { title: string }) => (
+      <div className="bg-white/80 backdrop-blur border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
+          <button
+            onClick={() => handleNavigate('landing')}
+            className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="font-medium">Back</span>
+          </button>
+          <span className="ml-2 text-sm text-gray-500">/</span>
+          <h1 className="ml-1 text-lg font-semibold">{title}</h1>
+        </div>
+      </div>
+    );
+
     switch (currentPage) {
       case 'landing':
         return <LandingPage onNavigate={handleNavigate} />;
       case 'how-it-works':
         return (
-          <div className="max-w-5xl mx-auto px-6 py-16">
-            <h1 className="text-4xl font-extrabold mb-4">How it Works</h1>
+          <>
+            <BackHeader title="How it Works" />
+            <div className="max-w-5xl mx-auto px-6 py-10">
+            <h1 className="text-3xl font-extrabold mb-4">How it Works</h1>
             <p className="text-gray-700 mb-6">Your data pipeline: Smart Crawler Hub → Data Normalizer → Enrichment Engine → Scoring + Vectorizer → API/DB.</p>
             <ol className="list-decimal pl-6 space-y-2 text-gray-800">
               <li>Trigger scan from the UI or schedule with Airflow/Prefect</li>
@@ -53,11 +73,14 @@ export default function App() {
               <li>Scores generate Succession, TAM, Fragmentation</li>
               <li>Results persist to DB and power the map</li>
             </ol>
-          </div>
+            </div>
+          </>
         );
       case 'products':
         return (
-          <div className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-6">
+          <>
+            <BackHeader title="Products" />
+            <div className="max-w-6xl mx-auto px-6 py-10 grid md:grid-cols-3 gap-6">
             {[
               { title: 'Oppy (Opportunity Finder)', desc: 'Income & demand-driven sourcing, heatmaps and signals.' },
               { title: 'Fragment Finder', desc: 'HHI-based fragmentation analytics for roll-ups.' },
@@ -68,21 +91,30 @@ export default function App() {
                 <p className="text-gray-700">{p.desc}</p>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         );
       case 'pricing':
-        return <PricingSection />;
+        return (
+          <>
+            <BackHeader title="Pricing" />
+            <PricingSection />
+          </>
+        );
       case 'signin':
         return (
-          <div className="max-w-md mx-auto px-6 py-16">
-            <h1 className="text-3xl font-extrabold mb-4">Sign In</h1>
+          <>
+            <BackHeader title="Sign In" />
+            <div className="max-w-md mx-auto px-6 py-10">
+            <h1 className="text-2xl font-extrabold mb-4">Sign In</h1>
             <p className="text-gray-600 mb-6">Placeholder authentication. Wire Clerk/Auth0 here.</p>
             <form className="space-y-4 bg-white border rounded-2xl p-6">
               <input className="w-full px-4 py-3 border rounded-lg" placeholder="Email" />
               <input className="w-full px-4 py-3 border rounded-lg" placeholder="Password" type="password" />
               <button className="w-full py-3 bg-emerald-600 text-white font-semibold rounded-lg">Sign In</button>
             </form>
-          </div>
+            </div>
+          </>
         );
       case 'dashboard':
         return <Dashboard onNavigate={handleNavigate} />;
