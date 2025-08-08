@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
 import dynamic from 'next/dynamic';
+import PricingSection from './pricing';
 
 const InteractiveMap = dynamic(() => import('./interactive-map'), { ssr: false });
 
@@ -270,6 +271,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Pricing */}
+      <PricingSection />
     </div>
   );
 } 
