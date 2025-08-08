@@ -16,10 +16,10 @@ export default function SolutionsPage({ onNavigate }: SolutionsPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <PallyButton variant="ghost" onClick={() => onNavigate('landing')} size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </PallyButton>
+              <button onClick={() => onNavigate('landing')} className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="font-medium">Back</span>
+              </button>
               <h1 className="text-2xl font-bold text-okapi-brown-800 ml-4">Our Solutions</h1>
             </div>
             <nav className="hidden md:flex items-center space-x-8">
