@@ -7,10 +7,10 @@ import dynamic from 'next/dynamic';
 const InteractiveMap = dynamic(() => import('./interactive-map'), { ssr: false });
 
 const navLinks = [
-  { name: "How it Works", href: "?page=how-it-works" },
-  { name: "Products", href: "?page=products" },
-  { name: "Pricing", href: "?page=pricing" },
-  { name: "CRM", href: "?page=crm" },
+  { name: "How it Works", page: "how-it-works" },
+  { name: "Products", page: "products" },
+  { name: "Pricing", page: "pricing" },
+  { name: "CRM", page: "crm" },
 ];
 
 const businesses = [
@@ -115,11 +115,16 @@ export default function LandingPage() {
             </div>
           <nav className="hidden md:flex gap-8 text-[14px] font-medium text-gray-700">
             {navLinks.map((link) => (
-              <a key={link.name} href={link.href} className="hover:text-black transition-colors">
+              <button
+                key={link.name}
+                onClick={() => navigate(link.page)}
+                className="hover:text-black transition-colors"
+                aria-label={link.name}
+              >
                 {link.name}
-              </a>
+              </button>
             ))}
-            </nav>
+          </nav>
           <div className="flex items-center gap-2">
             <button className="hidden md:inline-flex items-center px-4 py-2 rounded-lg font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition" onClick={() => navigate('signin')}>
               Sign In
