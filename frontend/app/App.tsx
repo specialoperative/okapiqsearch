@@ -40,7 +40,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-okapi-brown-50 to-okapi-brown-100">
+    <div className="min-h-screen bg-[#fcfbfa]">
       {renderPage()}
     </div>
   );

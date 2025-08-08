@@ -24,28 +24,7 @@ export default function RootLayout({
           crossOrigin=""
         />
       </head>
-      <body 
-        className={inter.className}
-        style={{
-          background: `
-            linear-gradient(135deg, rgba(139, 69, 19, 0.02) 0%, rgba(160, 82, 45, 0.05) 100%),
-            repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 15px,
-              rgba(139, 69, 19, 0.01) 15px,
-              rgba(139, 69, 19, 0.01) 30px
-            ),
-            repeating-linear-gradient(
-              -45deg,
-              transparent,
-              transparent 15px,
-              rgba(160, 82, 45, 0.01) 15px,
-              rgba(160, 82, 45, 0.01) 30px
-            )
-          `
-        }}
-      >
+      <body className={inter.className + ' bg-[#fcfbfa]'}>
         {children}
       </body>
     </html>
