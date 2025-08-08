@@ -3,14 +3,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
 import dynamic from 'next/dynamic';
-import PricingSection from './pricing';
 
 const InteractiveMap = dynamic(() => import('./interactive-map'), { ssr: false });
 
 const navLinks = [
-  { name: "How it Works", href: "#" },
-  { name: "Products", href: "#" },
-  { name: "Pricing", href: "#" },
+  { name: "How it Works", href: "?page=how-it-works" },
+  { name: "Products", href: "?page=products" },
+  { name: "Pricing", href: "?page=pricing" },
   { name: "CRM", href: "?page=crm" },
 ];
 
@@ -122,7 +121,7 @@ export default function LandingPage() {
             ))}
             </nav>
           <div className="flex items-center gap-2">
-            <button className="hidden md:inline-flex items-center px-4 py-2 rounded-lg font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition" onClick={() => navigate('crm')}>
+            <button className="hidden md:inline-flex items-center px-4 py-2 rounded-lg font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition" onClick={() => navigate('signin')}>
               Sign In
             </button>
             <button className="md:hidden p-2 rounded-lg hover:bg-gray-100" aria-label="Open menu">
@@ -271,9 +270,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Pricing */}
-      <PricingSection />
     </div>
   );
 } 
