@@ -168,8 +168,6 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
                     <span className="font-medium">Back</span>
                   </motion.button>
                 )}
-                <span className="mx-2 text-sm text-gray-400">/</span>
-                <span className="text-sm font-semibold text-gray-900">Market Scanner</span>
                 
                 <div>
                   <h1 className="text-2xl font-bold text-okapi-brown-900">
