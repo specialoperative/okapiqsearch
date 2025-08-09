@@ -7,9 +7,10 @@ import InteractiveMap from './interactive-map';
 
 interface MarketScannerPageProps {
   onNavigate?: (page: string) => void;
+  showHeader?: boolean;
 }
 
-export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps) {
+export default function MarketScannerPage({ onNavigate, showHeader = true }: MarketScannerPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('');
   const [radiusMiles, setRadiusMiles] = useState(25);
@@ -147,7 +148,8 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
       />
 
       <div className="relative z-10">
-        {/* Header */}
+        {/* Header (optional) */}
+        {showHeader && (
         <motion.div 
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -195,6 +197,7 @@ export default function MarketScannerPage({ onNavigate }: MarketScannerPageProps
             </div>
           </div>
         </motion.div>
+        )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Search Section */}

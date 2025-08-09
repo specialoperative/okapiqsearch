@@ -240,10 +240,43 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         </aside>
       </main>
 
-      {/* Map Section */}
+      {/* Map + Scanner Section */}
       <section className="max-w-7xl mx-auto px-6 -mt-6">
-        <div className="rounded-2xl overflow-hidden shadow border border-gray-100">
-          <InteractiveMap heightClassName="h-[420px]" businesses={mapBusinesses} center={computedCenter} />
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+          <div className="lg:col-span-3 rounded-2xl overflow-hidden shadow border border-gray-100">
+            <InteractiveMap heightClassName="h-[420px]" businesses={mapBusinesses} center={computedCenter} />
+          </div>
+          <div className="lg:col-span-2 rounded-2xl overflow-hidden shadow border border-gray-100 bg-white">
+            {/* Embedded slim scanner controls */}
+            <div className="p-4 border-b">
+              <h3 className="text-lg font-semibold">Quick Market Scan</h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Enter a city, ZIP, or industry..."
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => runScan(query.trim())}
+                  disabled={isScanning}
+                  className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {isScanning ? 'Scanning…' : 'Scan & Update Map'}
+                </button>
+                <button
+                  onClick={() => navigate('market-scanner')}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Open Full Scanner
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">Map updates with latest scan results.</p>
+                </div>
+          </div>
         </div>
       </section>
 
