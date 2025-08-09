@@ -11,7 +11,21 @@ import MarketScannerPage from '../components/market-scanner-page';
 import CRMPage from '../components/crm-page';
 import PricingSection from '../components/pricing';
 
-type Page = 'landing' | 'dashboard' | 'solutions' | 'case-studies' | 'market-analysis' | 'market-scanner' | 'crm' | 'how-it-works' | 'products' | 'pricing' | 'signin';
+type Page =
+  | 'landing'
+  | 'dashboard'
+  | 'solutions'
+  | 'case-studies'
+  | 'market-analysis'
+  | 'market-scanner'
+  | 'crm'
+  | 'how-it-works'
+  | 'products'
+  | 'pricing'
+  | 'signin'
+  | 'product-oppy'
+  | 'product-fragment-finder'
+  | 'product-acquisition-assistant';
 
 function getPageFromUrl(): Page {
   if (typeof window === 'undefined') return 'landing';
@@ -55,6 +69,33 @@ export default function App() {
       </div>
     );
 
+    const BreadcrumbHeader = ({ trail }: { trail: { label: string; page?: Page }[] }) => (
+      <div className="bg-white/80 backdrop-blur border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-2">
+          <button
+            onClick={() => handleNavigate('landing')}
+            className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="font-medium">Back</span>
+          </button>
+          {trail.map((t, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <span className="text-sm text-gray-400">/</span>
+              {t.page ? (
+                <button onClick={() => handleNavigate(t.page!)} className="text-sm text-emerald-700 hover:text-emerald-900">
+                  {t.label}
+                </button>
+              ) : (
+                <span className="text-sm font-semibold text-gray-900">{t.label}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
     switch (currentPage) {
       case 'landing':
         return <LandingPage onNavigate={handleNavigate} />;
@@ -79,18 +120,53 @@ export default function App() {
       case 'products':
         return (
           <>
-            <BackHeader title="Products" />
+            <BreadcrumbHeader trail={[{ label: 'Products' }]} />
             <div className="max-w-6xl mx-auto px-6 py-10 grid md:grid-cols-3 gap-6">
-            {[
-              { title: 'Oppy (Opportunity Finder)', desc: 'Income & demand-driven sourcing, heatmaps and signals.' },
-              { title: 'Fragment Finder', desc: 'HHI-based fragmentation analytics for roll-ups.' },
-              { title: 'Acquisition Assistant', desc: 'Deal pipeline, docs, Mini LBO & QoE previews.' },
-            ].map((p) => (
-              <div key={p.title} className="bg-white border rounded-2xl p-6 shadow">
-                <h3 className="text-xl font-bold mb-2">{p.title}</h3>
-                <p className="text-gray-700">{p.desc}</p>
-              </div>
-            ))}
+              <button onClick={() => handleNavigate('product-oppy')} className="text-left bg-white border rounded-2xl p-6 shadow hover:shadow-lg">
+                <h3 className="text-xl font-bold mb-2">Oppy (Opportunity Finder)</h3>
+                <p className="text-gray-700">Income & demand-driven sourcing, heatmaps and signals.</p>
+              </button>
+              <button onClick={() => handleNavigate('product-fragment-finder')} className="text-left bg-white border rounded-2xl p-6 shadow hover:shadow-lg">
+                <h3 className="text-xl font-bold mb-2">Fragment Finder</h3>
+                <p className="text-gray-700">HHI-based fragmentation analytics for roll-ups.</p>
+              </button>
+              <button onClick={() => handleNavigate('product-acquisition-assistant')} className="text-left bg-white border rounded-2xl p-6 shadow hover:shadow-lg">
+                <h3 className="text-xl font-bold mb-2">Acquisition Assistant</h3>
+                <p className="text-gray-700">Deal pipeline, docs, Mini LBO & QoE previews.</p>
+              </button>
+            </div>
+          </>
+        );
+      case 'product-oppy':
+        return (
+          <>
+            <BreadcrumbHeader trail={[{ label: 'Products', page: 'products' }, { label: 'Oppy (Opportunity Finder)' }]} />
+            <div className="max-w-5xl mx-auto px-6 py-10 space-y-4">
+              <h1 className="text-3xl font-extrabold">Oppy (Opportunity Finder)</h1>
+              <p className="text-gray-700">Income & demand-driven sourcing, heatmaps and signals.</p>
+              <p className="text-gray-700">Use Oppy to surface territories with strong income growth, new business formation, and favorable consumer trends. Trigger scans to overlay Census income, Google Trends, and marketplace signals.</p>
+            </div>
+          </>
+        );
+      case 'product-fragment-finder':
+        return (
+          <>
+            <BreadcrumbHeader trail={[{ label: 'Products', page: 'products' }, { label: 'Fragment Finder' }]} />
+            <div className="max-w-5xl mx-auto px-6 py-10 space-y-4">
+              <h1 className="text-3xl font-extrabold">Fragment Finder</h1>
+              <p className="text-gray-700">HHI-based fragmentation analytics for roll-ups.</p>
+              <p className="text-gray-700">Calculate HHI, concentration ratios, and roll-up attractiveness. Quickly identify ZIPs with high competitor counts and low concentration to assemble synergistic acquisitions.</p>
+            </div>
+          </>
+        );
+      case 'product-acquisition-assistant':
+        return (
+          <>
+            <BreadcrumbHeader trail={[{ label: 'Products', page: 'products' }, { label: 'Acquisition Assistant' }]} />
+            <div className="max-w-5xl mx-auto px-6 py-10 space-y-4">
+              <h1 className="text-3xl font-extrabold">Acquisition Assistant</h1>
+              <p className="text-gray-700">Deal pipeline, docs, Mini LBO & QoE previews.</p>
+              <p className="text-gray-700">Manage leads through LOI and close. Upload docs for AI QoE highlights and run a Mini LBO with basic assumptions to sanity-check IRR and equity multiple.</p>
             </div>
           </>
         );
