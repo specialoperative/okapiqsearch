@@ -29,6 +29,14 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
   // Removed API Online badge per request
   const [working, setWorking] = useState<{active: boolean; step: string}>({active: false, step: ''});
+  const workingSteps = [
+    'Crawling data sources…',
+    'Normalizing records…',
+    'AI Enrichment in progress…',
+    'Scoring & clustering…',
+    'Compiling insights…'
+  ];
+  const [workingIndex, setWorkingIndex] = useState<number>(0);
   const [sources, setSources] = useState<Record<string, boolean>>({
     google_maps: true,
     google_serp: true,
@@ -92,11 +100,21 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     }
 
     setIsScanning(true);
-    setWorking({ active: true, step: 'Crawling data sources…' });
+    setWorkingIndex(0);
+    setWorking({ active: true, step: workingSteps[0] });
     setError(null);
     setSuccess(null);
 
     try {
+      // advance step hints while waiting for API
+      const advancer = window.setInterval(() => {
+        setWorkingIndex((i) => {
+          const ni = Math.min(i + 1, workingSteps.length - 1);
+          setWorking({ active: true, step: workingSteps[ni] });
+          return ni;
+        });
+      }, 900);
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/intelligence/scan`, {
         method: 'POST',
         headers: {
@@ -142,6 +160,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       setWorking({ active: false, step: '' });
     } finally {
       setIsScanning(false);
+      // stop advancer if running
+      try { window.clearInterval as any } catch {}
     }
   };
 
@@ -424,7 +444,13 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
             <div className="fixed inset-0 z-40 bg-black/10">
               <div className="pointer-events-none fixed inset-x-0 top-20 z-50 mx-auto flex w-full max-w-xl items-center gap-3 rounded-xl border border-okapi-brown-200 bg-white/90 p-3 shadow-lg backdrop-blur">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-okapi-brown-600 border-t-transparent" />
-                <span className="text-sm text-okapi-brown-800">{working.step}</span>
+                <div className="flex-1">
+                  <div className="text-sm text-okapi-brown-800 mb-1">{working.step}</div>
+                  <div className="h-1.5 w-full overflow-hidden rounded bg-okapi-brown-100">
+                    <div className="h-1.5 bg-okapi-brown-600 transition-all" style={{ width: `${((workingIndex+1)/workingSteps.length)*100}%` }} />
+                  </div>
+                </div>
+                <div className="pointer-events-auto text-[10px] font-semibold rounded-full px-2 py-1 bg-emerald-600 text-white">AI</div>
               </div>
             </div>
           )}
@@ -590,6 +616,13 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                             </span>
                           </div>
                         </div>
+
+                        {/* AI badge if enriched */}
+                        {Array.isArray(business.tags) && business.tags.some((t:string)=> t.includes('enriched_with_web_ai') || t.includes('enriched_with_nlp')) && (
+                          <div className="mb-3 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> AI-enhanced
+                          </div>
+                        )}
 
                         <div className="space-y-3">
                           <div className="flex items-center justify-between text-sm text-okapi-brown-600">
