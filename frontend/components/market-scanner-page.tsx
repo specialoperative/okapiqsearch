@@ -27,6 +27,9 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
+  const [apiOnline, setApiOnline] = useState<boolean>(false);
+  const [apiLatencyMs, setApiLatencyMs] = useState<number | null>(null);
+  const [working, setWorking] = useState<{active: boolean; step: string}>({active: false, step: ''});
   const [sources, setSources] = useState<Record<string, boolean>>({
     google_maps: true,
     google_serp: true,
@@ -68,6 +71,31 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     );
   }, []);
 
+  // Ping backend health for visibility
+  useEffect(() => {
+    let mounted = true;
+    const ping = async () => {
+      try {
+        const t0 = performance.now();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/intelligence/health`, { method: 'GET' });
+        const t1 = performance.now();
+        if (!mounted) return;
+        setApiOnline(res.ok);
+        setApiLatencyMs(Math.max(0, Math.round(t1 - t0)));
+      } catch {
+        if (!mounted) return;
+        setApiOnline(false);
+        setApiLatencyMs(null);
+      }
+    };
+    ping();
+    const id = setInterval(ping, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, []);
+
   const industries = [
     'HVAC', 'Plumbing', 'Electrical', 'Landscaping', 'Restaurant', 
     'Retail', 'Healthcare', 'Automotive', 'Construction', 'Manufacturing',
@@ -88,6 +116,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     }
 
     setIsScanning(true);
+    setWorking({ active: true, step: 'Crawling data sources…' });
     setError(null);
     setSuccess(null);
 
@@ -121,6 +150,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       const data = await response.json();
       setScanResults(data);
       setSuccess(`Found ${data.businesses?.length || 0} businesses in ${searchTerm}`);
+      setWorking({ active: false, step: '' });
       
       // Add to recent scans
       setRecentScans(prev => [{
@@ -133,6 +163,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     } catch (err) {
       setError('Failed to scan market. Please try again.');
       console.error('Scan error:', err);
+      setWorking({ active: false, step: '' });
     } finally {
       setIsScanning(false);
     }
@@ -234,6 +265,19 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Live pipeline status bar */}
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border ${apiOnline ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
+              <span className={`h-2 w-2 rounded-full ${apiOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+              {apiOnline ? `API Online${apiLatencyMs !== null ? ` • ${apiLatencyMs}ms` : ''}` : 'API Offline'}
+            </div>
+            {Object.entries(sources).map(([key, enabled]) => (
+              <div key={key} className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border ${enabled ? 'border-okapi-brown-200 bg-white text-okapi-brown-800' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${enabled ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                {key.replace('_', ' ')}
+              </div>
+            ))}
+          </div>
           {/* Search Section */}
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
@@ -402,6 +446,16 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
               </div>
             </div>
           </motion.div>
+
+          {/* Working overlay */}
+          {working.active && (
+            <div className="fixed inset-0 z-40 bg-black/10">
+              <div className="pointer-events-none fixed inset-x-0 top-20 z-50 mx-auto flex w-full max-w-xl items-center gap-3 rounded-xl border border-okapi-brown-200 bg-white/90 p-3 shadow-lg backdrop-blur">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-okapi-brown-600 border-t-transparent" />
+                <span className="text-sm text-okapi-brown-800">{working.step}</span>
+              </div>
+            </div>
+          )}
 
           {/* Intelligence Sources + Advanced Filters side panel */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
