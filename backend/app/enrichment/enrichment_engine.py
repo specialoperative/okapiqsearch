@@ -519,22 +519,12 @@ class EnrichmentEngine:
                 processing_time=(datetime.now() - start_time).total_seconds()
             )
         except Exception as e:
-            return EnrichmentResult(
-                success=False,
-                enriched_data={},
-                confidence_score=0.0,
-                sources_used=['SERPAPI','OpenAI'],
-                processing_time=(datetime.now() - start_time).total_seconds(),
-                errors=[str(e)]
-            )
-            
-        except Exception as e:
             processing_time = (datetime.now() - start_time).total_seconds()
             return EnrichmentResult(
                 success=False,
                 enriched_data={},
                 confidence_score=0.0,
-                sources_used=[],
+                sources_used=['SERPAPI','OpenAI'],
                 processing_time=processing_time,
                 errors=[str(e)]
             )
