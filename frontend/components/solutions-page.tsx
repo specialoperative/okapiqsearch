@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import { SmoothReveal, StaggeredReveal, PallyButton, OrigamiCard, SmoothNavLink } from '../ui/smooth-components';
 import { ArrowLeft, Search, Building2, Users, Target, Zap, TrendingUp, BarChart3, Check, Star } from 'lucide-react';
 
@@ -23,10 +24,10 @@ export default function SolutionsPage({ onNavigate }: SolutionsPageProps) {
               <h1 className="text-2xl font-bold text-okapi-brown-800 ml-4">Our Solutions</h1>
             </div>
             <nav className="hidden md:flex items-center space-x-8">
+              <a href="/market-intelligence" className="nav-link">Dashboard</a>
               <SmoothNavLink onClick={() => onNavigate('market-scanner')}>Scanner</SmoothNavLink>
               <SmoothNavLink onClick={() => onNavigate('market-analysis')}>Analysis</SmoothNavLink>
               <SmoothNavLink onClick={() => onNavigate('crm')}>CRM</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('dashboard')}>Dashboard</SmoothNavLink>
             </nav>
           </div>
         </div>
@@ -75,9 +76,11 @@ export default function SolutionsPage({ onNavigate }: SolutionsPageProps) {
                 </li>
               </ul>
               <div className="flex space-x-2">
-                <PallyButton variant="secondary" className="flex-1" onClick={() => onNavigate('market-scanner')}>
-                  Try Oppy
-                </PallyButton>
+                <Link href="/oppy" className="flex-1">
+                  <PallyButton variant="secondary" className="w-full">
+                    Try Oppy
+                  </PallyButton>
+                </Link>
                 <PallyButton variant="ghost" size="sm" onClick={() => onNavigate('case-studies')}>
                   <Star className="w-4 h-4" />
                 </PallyButton>
@@ -109,9 +112,11 @@ export default function SolutionsPage({ onNavigate }: SolutionsPageProps) {
                 </li>
               </ul>
               <div className="flex space-x-2">
-                <PallyButton variant="secondary" className="flex-1" onClick={() => onNavigate('market-analysis')}>
-                  Try Fragment Finder
-                </PallyButton>
+                <Link href="/fragment-finder" className="flex-1">
+                  <PallyButton variant="secondary" className="w-full">
+                    Try Fragment Finder
+                  </PallyButton>
+                </Link>
                 <PallyButton variant="ghost" size="sm" onClick={() => onNavigate('case-studies')}>
                   <Star className="w-4 h-4" />
                 </PallyButton>
@@ -143,9 +148,11 @@ export default function SolutionsPage({ onNavigate }: SolutionsPageProps) {
                 </li>
               </ul>
               <div className="flex space-x-2">
-                <PallyButton variant="secondary" className="flex-1" onClick={() => onNavigate('crm')}>
-                  Try Acquisition Assistant
-                </PallyButton>
+                <Link href="/acquisition-assistant" className="flex-1">
+                  <PallyButton variant="secondary" className="w-full">
+                    Try Acquisition Assistant
+                  </PallyButton>
+                </Link>
                 <PallyButton variant="ghost" size="sm" onClick={() => onNavigate('case-studies')}>
                   <Star className="w-4 h-4" />
                 </PallyButton>

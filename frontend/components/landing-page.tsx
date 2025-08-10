@@ -117,6 +117,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             <span className="font-bold text-[18px] tracking-tight">Okapiq</span>
             </div>
           <nav className="hidden md:flex gap-8 text-[14px] font-medium text-gray-700">
+            <a href="/market-intelligence" className="hover:text-black transition-colors" aria-label="Dashboard">
+              Dashboard
+            </a>
             {navLinks.map((link) => (
               <button
                 key={link.name}
@@ -160,7 +163,12 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              runScan(query.trim());
+              const q = query.trim();
+              if (!q) return;
+              // Navigate to dedicated scanner page with query param
+              if (typeof window !== 'undefined') {
+                window.location.href = `/oppy?location=${encodeURIComponent(q)}`;
+              }
             }}
             className="flex flex-col sm:flex-row gap-4 mb-5"
           >

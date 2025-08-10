@@ -8,9 +8,10 @@ import InteractiveMap from './interactive-map';
 interface MarketScannerPageProps {
   onNavigate?: (page: string) => void;
   showHeader?: boolean;
+  initialLocation?: string;
 }
 
-export default function MarketScannerPage({ onNavigate, showHeader = true }: MarketScannerPageProps) {
+export default function MarketScannerPage({ onNavigate, showHeader = true, initialLocation }: MarketScannerPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('');
   const [radiusMiles, setRadiusMiles] = useState(25);
@@ -26,6 +27,31 @@ export default function MarketScannerPage({ onNavigate, showHeader = true }: Mar
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
+  const [sources, setSources] = useState<Record<string, boolean>>({
+    gmb: true,
+    yelp: true,
+    dataaxle: true,
+    sba: true,
+    linkedin: true,
+    census_irs: true,
+  });
+  const [advFilters, setAdvFilters] = useState({
+    includeRisk: true,
+    fragmentation: true,
+    linkedinSignals: true,
+  });
+
+  // If an initialLocation is provided (e.g., from /oppy?location=...), seed the input and auto-run once
+  useEffect(() => {
+    if (!initialLocation) return;
+    setSearchTerm(initialLocation);
+    // Defer to ensure state applied before scanning
+    const id = window.setTimeout(() => {
+      void handleScan();
+    }, 50);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLocation]);
   // Geolocate on mount to preset map center
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -76,7 +102,16 @@ export default function MarketScannerPage({ onNavigate, showHeader = true }: Mar
           location: searchTerm,
           industry: selectedIndustry || 'hvac',
           radius_miles: radiusMiles,
-          max_businesses: 50
+          max_businesses: 50,
+          data_sources: Object.entries(sources).filter(([, v]) => v).map(([k]) => k),
+          filters: {
+            include_succession_risk: advFilters.includeRisk,
+            enable_fragmentation: advFilters.fragmentation,
+            include_linkedin_signals: advFilters.linkedinSignals,
+            min_revenue: minRevenue || undefined,
+            max_revenue: maxRevenue || undefined,
+            owner_age: ownerAge || undefined,
+          },
         }),
       });
 
@@ -368,6 +403,75 @@ export default function MarketScannerPage({ onNavigate, showHeader = true }: Mar
               </div>
             </div>
           </motion.div>
+
+          {/* Intelligence Sources + Advanced Filters side panel */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl shadow border border-okapi-brown-200 p-6">
+              <h3 className="text-xl font-bold text-okapi-brown-900 mb-4">Intelligence Sources</h3>
+              <div className="space-y-3 text-sm text-okapi-brown-800">
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.gmb} onChange={e=>setSources(s=>({...s,gmb:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Google My Business</span>
+                    <div className="text-okapi-brown-600 text-xs">Ratings, reviews, digital presence</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.yelp} onChange={e=>setSources(s=>({...s,yelp:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Yelp Intelligence</span>
+                    <div className="text-okapi-brown-600 text-xs">Owner detection, sentiment analysis</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.dataaxle} onChange={e=>setSources(s=>({...s,dataaxle:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">DataAxle</span>
+                    <div className="text-okapi-brown-600 text-xs">Revenue, owner data, benchmarks</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.sba} onChange={e=>setSources(s=>({...s,sba:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">SBA Records</span>
+                    <div className="text-okapi-brown-600 text-xs">Loan history, succession signals</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.linkedin} onChange={e=>setSources(s=>({...s,linkedin:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">LinkedIn Signals</span>
+                    <div className="text-okapi-brown-600 text-xs">Deal activity, owner profiles</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.census_irs} onChange={e=>setSources(s=>({...s,census_irs:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Census & IRS</span>
+                    <div className="text-okapi-brown-600 text-xs">Demographics, market analysis</div>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow border border-okapi-brown-200 p-6">
+              <h3 className="text-xl font-bold text-okapi-brown-900 mb-4">Advanced Filters</h3>
+              <div className="space-y-3 text-sm text-okapi-brown-800">
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" checked={advFilters.includeRisk} onChange={e=>setAdvFilters(f=>({...f,includeRisk:e.target.checked}))} />
+                  <span>Include succession risk analysis</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" checked={advFilters.fragmentation} onChange={e=>setAdvFilters(f=>({...f,fragmentation:e.target.checked}))} />
+                  <span>Fragmentation analysis</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" checked={advFilters.linkedinSignals} onChange={e=>setAdvFilters(f=>({...f,linkedinSignals:e.target.checked}))} />
+                  <span>LinkedIn deal signals</span>
+                </label>
+              </div>
+            </div>
+          </div>
 
           {/* Interactive Map - Positioned right after View toggle */}
           {viewMode === 'map' && (
