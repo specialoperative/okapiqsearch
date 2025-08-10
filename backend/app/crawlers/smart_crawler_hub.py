@@ -34,6 +34,7 @@ from ..core.config import settings
 
 class CrawlerType(Enum):
     GOOGLE_MAPS = "google_maps"
+    GOOGLE_SERP = "google_serp"
     YELP = "yelp"
     LINKEDIN = "linkedin"
     SBA_RECORDS = "sba_records"
@@ -85,6 +86,7 @@ class SmartCrawlerHub:
         
         # Initialize crawler agents
         self.google_agent = GoogleScapeAgent()
+        self.google_serp_agent = GoogleSerpAgent()
         self.yelp_agent = YelpDeepSignalAgent()
         self.linkedin_agent = LinkedInSignalAgent()
         self.sba_agent = SBARecordsAgent()
@@ -164,6 +166,15 @@ class SmartCrawlerHub:
                 "query": f"{industry} near {location}" if industry else f"businesses near {location}",
                 "radius": 25
             })
+        elif crawler_type == CrawlerType.GOOGLE_SERP:
+            target_url = "https://serpapi.com/search.json"
+            search_params.update({
+                "engine": "google",
+                "q": f"{industry} {location}" if industry else f"businesses {location}",
+                "google_domain": "google.com",
+                "hl": "en",
+                "gl": "us"
+            })
             
         elif crawler_type == CrawlerType.YELP:
             target_url = "https://www.yelp.com/search"
@@ -201,6 +212,8 @@ class SmartCrawlerHub:
             # Route to appropriate crawler agent
             if request.crawler_type == CrawlerType.GOOGLE_MAPS:
                 result = await self.google_agent.crawl(request)
+            elif request.crawler_type == CrawlerType.GOOGLE_SERP:
+                result = await self.google_serp_agent.crawl(request)
             elif request.crawler_type == CrawlerType.YELP:
                 result = await self.yelp_agent.crawl(request)
             elif request.crawler_type == CrawlerType.LINKEDIN:
@@ -652,7 +665,95 @@ __all__ = [
     'CrawlRequest',
     'CrawlResult',
     'GoogleScapeAgent',
+    'GoogleSerpAgent',
     'YelpDeepSignalAgent',
     'LinkedInSignalAgent',
     'SBARecordsAgent'
 ]
+
+
+class GoogleSerpAgent:
+    """
+    Google SERP Agent - Uses SerpAPI to fetch Google search results for businesses
+    Falls back gracefully if no API key is configured.
+    """
+
+    def __init__(self):
+        self.logger = logging.getLogger(f"{__name__}.GoogleSerpAgent")
+
+    async def crawl(self, request: CrawlRequest) -> CrawlResult:
+        from ..core.config import settings
+        api_key = settings.SERPAPI_KEY
+        query = request.search_params.get("q") or request.search_params.get("query")
+        location = request.search_params.get("location")
+
+        if not api_key:
+            # No API key; return empty with message so pipeline can continue
+            return CrawlResult(
+                success=False,
+                data=[],
+                metadata={"note": "SERPAPI_KEY not set"},
+                timestamp=datetime.now(),
+                source="google_serp",
+                errors=["SERPAPI_KEY not set"]
+            )
+
+        try:
+            params = {
+                **{k: v for k, v in request.search_params.items() if v is not None},
+                "api_key": api_key,
+                "num": 20,
+            }
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get("https://serpapi.com/search.json", params=params) as resp:
+                    data = await resp.json()
+
+            results = []
+            for item in data.get("local_results", []) or data.get("organic_results", []) or []:
+                name = item.get("title") or item.get("name") or "Business"
+                rating = item.get("rating") or 0
+                review_count = item.get("reviews") or item.get("reviews_count") or 0
+                address = item.get("address") or item.get("snippet")
+                phone = item.get("phone_number")
+                website = item.get("link") or item.get("website")
+
+                # Basic estimates similar to GoogleScapeAgent
+                base_revenue = 1000000
+                rating_factor = (float(rating) / 5.0) if rating else 0.6
+                review_factor = min(float(review_count) / 100.0, 2.0) if review_count else 0.5
+                estimated_revenue = int(base_revenue * rating_factor * review_factor)
+
+                results.append({
+                    "name": name,
+                    "rating": float(rating) if rating else 0.0,
+                    "review_count": int(review_count) if review_count else 0,
+                    "address": address,
+                    "phone": phone,
+                    "website": website,
+                    "estimated_revenue": estimated_revenue,
+                    "employee_count": max(5, min(50, int(estimated_revenue / 100000))),
+                    "years_in_business": max(3, min(30, int((review_count or 10) / 5 + (rating or 3) * 2))),
+                    "succession_risk_score": min(100, max(30, int((review_count or 10) / 2 + (5 - (rating or 3)) * 10))),
+                    "owner_age_estimate": 45,
+                    "coordinates": None,
+                    "source": "Google SERP via SerpAPI"
+                })
+
+            return CrawlResult(
+                success=True,
+                data=results,
+                metadata={"query": query, "location": location, "count": len(results)},
+                timestamp=datetime.now(),
+                source="google_serp"
+            )
+        except Exception as e:
+            self.logger.error(f"Google SERP crawl failed: {e}")
+            return CrawlResult(
+                success=False,
+                data=[],
+                metadata={"error": str(e)},
+                timestamp=datetime.now(),
+                source="google_serp",
+                errors=[str(e)]
+            )

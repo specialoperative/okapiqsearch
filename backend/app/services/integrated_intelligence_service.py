@@ -146,7 +146,7 @@ class IntegratedIntelligenceService:
             crawl_start = time.time()
             self.logger.info(f"Step 1: Running Smart Crawler Hub for {request.location}")
             
-            crawl_sources = request.crawl_sources or ['google_maps', 'yelp']
+            crawl_sources = request.crawl_sources or ['google_maps', 'google_serp', 'yelp']
             crawler_types = [CrawlerType(source) for source in crawl_sources if source in [e.value for e in CrawlerType]]
             
             crawl_results = await self.crawler_hub.crawl_business_data(

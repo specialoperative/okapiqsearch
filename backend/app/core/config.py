@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     GLENCOCO_API_KEY: Optional[str] = os.getenv("GLENCOCO_API_KEY")
     CENSUS_API_KEY: Optional[str] = os.getenv("CENSUS_API_KEY")
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+    SERPAPI_KEY: Optional[str] = os.getenv("SERPAPI_KEY")
     
     # Stripe
     STRIPE_SECRET_KEY: Optional[str] = os.getenv("STRIPE_SECRET_KEY")

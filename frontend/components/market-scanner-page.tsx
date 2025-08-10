@@ -28,12 +28,11 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
   const [sources, setSources] = useState<Record<string, boolean>>({
-    gmb: true,
+    google_maps: true,
+    google_serp: true,
     yelp: true,
-    dataaxle: true,
-    sba: true,
-    linkedin: true,
-    census_irs: true,
+    linkedin: false,
+    sba_records: false,
   });
   const [advFilters, setAdvFilters] = useState({
     includeRisk: true,
@@ -410,10 +409,17 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
               <h3 className="text-xl font-bold text-okapi-brown-900 mb-4">Intelligence Sources</h3>
               <div className="space-y-3 text-sm text-okapi-brown-800">
                 <label className="flex items-start gap-3">
-                  <input type="checkbox" className="mt-1" checked={sources.gmb} onChange={e=>setSources(s=>({...s,gmb:e.target.checked}))} />
+                  <input type="checkbox" className="mt-1" checked={sources.google_maps} onChange={e=>setSources(s=>({...s,google_maps:e.target.checked}))} />
                   <span>
-                    <span className="font-medium">Google My Business</span>
-                    <div className="text-okapi-brown-600 text-xs">Ratings, reviews, digital presence</div>
+                    <span className="font-medium">Google Maps</span>
+                    <div className="text-okapi-brown-600 text-xs">Local results, ratings, reviews</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.google_serp} onChange={e=>setSources(s=>({...s,google_serp:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Google SERP (SerpAPI)</span>
+                    <div className="text-okapi-brown-600 text-xs">Organic results, sites, phones</div>
                   </span>
                 </label>
                 <label className="flex items-start gap-3">
@@ -424,20 +430,6 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                   </span>
                 </label>
                 <label className="flex items-start gap-3">
-                  <input type="checkbox" className="mt-1" checked={sources.dataaxle} onChange={e=>setSources(s=>({...s,dataaxle:e.target.checked}))} />
-                  <span>
-                    <span className="font-medium">DataAxle</span>
-                    <div className="text-okapi-brown-600 text-xs">Revenue, owner data, benchmarks</div>
-                  </span>
-                </label>
-                <label className="flex items-start gap-3">
-                  <input type="checkbox" className="mt-1" checked={sources.sba} onChange={e=>setSources(s=>({...s,sba:e.target.checked}))} />
-                  <span>
-                    <span className="font-medium">SBA Records</span>
-                    <div className="text-okapi-brown-600 text-xs">Loan history, succession signals</div>
-                  </span>
-                </label>
-                <label className="flex items-start gap-3">
                   <input type="checkbox" className="mt-1" checked={sources.linkedin} onChange={e=>setSources(s=>({...s,linkedin:e.target.checked}))} />
                   <span>
                     <span className="font-medium">LinkedIn Signals</span>
@@ -445,10 +437,10 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                   </span>
                 </label>
                 <label className="flex items-start gap-3">
-                  <input type="checkbox" className="mt-1" checked={sources.census_irs} onChange={e=>setSources(s=>({...s,census_irs:e.target.checked}))} />
+                  <input type="checkbox" className="mt-1" checked={sources.sba_records} onChange={e=>setSources(s=>({...s,sba_records:e.target.checked}))} />
                   <span>
-                    <span className="font-medium">Census & IRS</span>
-                    <div className="text-okapi-brown-600 text-xs">Demographics, market analysis</div>
+                    <span className="font-medium">SBA Records</span>
+                    <div className="text-okapi-brown-600 text-xs">Loan history, succession signals</div>
                   </span>
                 </label>
               </div>
