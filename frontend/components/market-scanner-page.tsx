@@ -27,8 +27,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
-  const [apiOnline, setApiOnline] = useState<boolean>(false);
-  const [apiLatencyMs, setApiLatencyMs] = useState<number | null>(null);
+  // Removed API Online badge per request
   const [working, setWorking] = useState<{active: boolean; step: string}>({active: false, step: ''});
   const [sources, setSources] = useState<Record<string, boolean>>({
     google_maps: true,
@@ -71,30 +70,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     );
   }, []);
 
-  // Ping backend health for visibility
-  useEffect(() => {
-    let mounted = true;
-    const ping = async () => {
-      try {
-        const t0 = performance.now();
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/intelligence/health`, { method: 'GET' });
-        const t1 = performance.now();
-        if (!mounted) return;
-        setApiOnline(res.ok);
-        setApiLatencyMs(Math.max(0, Math.round(t1 - t0)));
-      } catch {
-        if (!mounted) return;
-        setApiOnline(false);
-        setApiLatencyMs(null);
-      }
-    };
-    ping();
-    const id = setInterval(ping, 15000);
-    return () => {
-      mounted = false;
-      clearInterval(id);
-    };
-  }, []);
+  // API health badge removed
 
   const industries = [
     'HVAC', 'Plumbing', 'Electrical', 'Landscaping', 'Restaurant', 
@@ -265,12 +241,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Live pipeline status bar */}
+          {/* Source indicators */}
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border ${apiOnline ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
-              <span className={`h-2 w-2 rounded-full ${apiOnline ? 'bg-green-500' : 'bg-red-500'}`} />
-              {apiOnline ? `API Online${apiLatencyMs !== null ? ` • ${apiLatencyMs}ms` : ''}` : 'API Offline'}
-            </div>
             {Object.entries(sources).map(([key, enabled]) => (
               <div key={key} className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border ${enabled ? 'border-okapi-brown-200 bg-white text-okapi-brown-800' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${enabled ? 'bg-emerald-500' : 'bg-gray-300'}`} />
