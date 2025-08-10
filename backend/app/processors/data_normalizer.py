@@ -28,6 +28,7 @@ from email_validator import validate_email, EmailNotValidError
 
 class DataSource(Enum):
     GOOGLE_MAPS = "google_maps"
+    GOOGLE_SERP = "google_serp"
     YELP = "yelp"
     LINKEDIN = "linkedin"
     SBA_RECORDS = "sba_records"
@@ -629,6 +630,7 @@ class DataNormalizer:
         # Base score by source reliability
         source_scores = {
             DataSource.GOOGLE_MAPS: 0.8,
+            DataSource.GOOGLE_SERP: 0.7,
             DataSource.YELP: 0.75,
             DataSource.SBA_RECORDS: 0.9,
             DataSource.DATAAXLE: 0.85,
