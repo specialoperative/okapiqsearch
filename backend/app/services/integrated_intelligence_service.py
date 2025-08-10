@@ -185,7 +185,7 @@ class IntegratedIntelligenceService:
             enrich_start = time.time()
             self.logger.info(f"Step 3: Running Enrichment Engine")
             
-            enrichment_types = request.enrichment_types or ['census', 'irs', 'sos', 'nlp', 'market_intelligence']
+            enrichment_types = request.enrichment_types or ['census', 'irs', 'sos', 'nlp', 'market_intelligence', 'web_ai']
             enriched_businesses = await self.enrichment_engine.enrich_businesses(
                 normalized_businesses,
                 enrichment_types=enrichment_types

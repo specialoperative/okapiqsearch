@@ -103,6 +103,7 @@ class EnrichmentEngine:
         self.irs_client = IRSDataClient()
         self.sos_client = SOSRegistryClient()
         self.nlp_processor = NLPProcessor()
+        self.web_researcher = WebResearcher()
         
         # Cache for expensive operations
         self.cache = {}
@@ -185,6 +186,11 @@ class EnrichmentEngine:
                 nlp_result = await self._enrich_with_nlp(business)
                 if nlp_result.success:
                     enrichment_results['nlp'] = nlp_result.enriched_data
+            # AI web research (fresh web data via SERP + LLM)
+            if 'web_ai' in enrichment_types:
+                web_result = await self._enrich_with_web_ai(business)
+                if web_result.success:
+                    enrichment_results['web_ai'] = web_result.enriched_data
                     
             # Market intelligence enrichment
             if 'market_intelligence' in enrichment_types:
@@ -485,6 +491,41 @@ class EnrichmentEngine:
                 confidence_score=0.75,
                 sources_used=['Market_Intelligence_Engine'],
                 processing_time=processing_time
+            )
+    
+    async def _enrich_with_web_ai(self, business: NormalizedBusiness) -> EnrichmentResult:
+        """Use SERPAPI to fetch fresh web snippets and summarize with LLM."""
+        start_time = datetime.now()
+        try:
+            query = f"{business.name} {business.address.city or ''} {business.address.state or ''} owner review revenue contact".strip()
+            serp = await self.web_researcher.search_google(query)
+            summary = await self.web_researcher.summarize_snippets(query, serp.get('snippets', []))
+            enriched = {
+                'web_research': {
+                    'query': query,
+                    'snippets_used': len(serp.get('snippets', [])),
+                    'owner_candidates': summary.get('owner_candidates', []),
+                    'emails_found': summary.get('emails_found', []),
+                    'phones_found': summary.get('phones_found', []),
+                    'key_points': summary.get('key_points', []),
+                    'risk_signals': summary.get('risk_signals', []),
+                }
+            }
+            return EnrichmentResult(
+                success=True,
+                enriched_data=enriched,
+                confidence_score=0.6,
+                sources_used=['SERPAPI','OpenAI'],
+                processing_time=(datetime.now() - start_time).total_seconds()
+            )
+        except Exception as e:
+            return EnrichmentResult(
+                success=False,
+                enriched_data={},
+                confidence_score=0.0,
+                sources_used=['SERPAPI','OpenAI'],
+                processing_time=(datetime.now() - start_time).total_seconds(),
+                errors=[str(e)]
             )
             
         except Exception as e:
@@ -830,6 +871,67 @@ class NLPProcessor:
             business_insights=["Standard business operations"],
             succession_signals=succession_signals
         )
+
+
+class WebResearcher:
+    """Combines SERPAPI searches with an LLM summarizer to bring fresh web data."""
+    async def search_google(self, query: str) -> Dict[str, Any]:
+        from ..core.config import settings
+        api_key = settings.SERPAPI_KEY
+        if not api_key:
+            return {'snippets': []}
+        params = { 'engine': 'google', 'q': query, 'api_key': api_key, 'num': 10 }
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://serpapi.com/search.json', params=params) as resp:
+                data = await resp.json()
+        snippets = []
+        for r in (data.get('organic_results') or []):
+            snippet = {
+                'title': r.get('title'),
+                'link': r.get('link'),
+                'snippet': r.get('snippet')
+            }
+            snippets.append(snippet)
+        return {'snippets': snippets}
+
+    async def summarize_snippets(self, query: str, snippets: List[Dict[str, str]]) -> Dict[str, Any]:
+        from ..core.config import settings
+        if not settings.OPENAI_API_KEY:
+            # Heuristic extraction without LLM
+            emails, phones, owners = [], [], []
+            for s in snippets:
+                text = (s.get('snippet') or '')
+                emails += re.findall(r"[\w\.-]+@[\w\.-]+", text)
+                phones += re.findall(r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b", text)
+                owner_match = re.findall(r"owner\s+(\w+(?:\s+\w+)?)", text, re.I)
+                owners += owner_match
+            return {
+                'owner_candidates': owners[:3],
+                'emails_found': emails[:3],
+                'phones_found': phones[:3],
+                'key_points': [],
+                'risk_signals': []
+            }
+        # LLM summarization
+        openai.api_key = settings.OPENAI_API_KEY
+        content = "\n\n".join([f"Title: {s.get('title')}\nSnippet: {s.get('snippet')}\nURL: {s.get('link')}" for s in snippets[:10]])
+        prompt = (
+            "You are an analyst. Given web snippets for a business query, extract key points, possible owner names,"
+            " any emails/phones in text, and potential risk/succession signals. Return JSON with keys: key_points,"
+            " owner_candidates, emails_found, phones_found, risk_signals."
+            f"\n\nQuery: {query}\nSnippets:\n{content}"
+        )
+        try:
+            resp = await openai.ChatCompletion.acreate(model='gpt-3.5-turbo', messages=[{"role":"user","content": prompt}], temperature=0.2)
+            text = resp.choices[0].message.content
+            # Attempt to parse JSON; fallback to heuristics
+            try:
+                parsed = json.loads(text)
+                return parsed
+            except Exception:
+                return {'key_points':[text], 'owner_candidates':[], 'emails_found':[], 'phones_found':[], 'risk_signals':[]}
+        except Exception:
+            return {'key_points':[], 'owner_candidates':[], 'emails_found':[], 'phones_found':[], 'risk_signals':[]}
 
 
 # Export main classes
