@@ -186,11 +186,11 @@ class EnrichmentEngine:
                 nlp_result = await self._enrich_with_nlp(business)
                 if nlp_result.success:
                     enrichment_results['nlp'] = nlp_result.enriched_data
-            # AI web research (fresh web data via SERP + LLM)
-            if 'web_ai' in enrichment_types:
-                web_result = await self._enrich_with_web_ai(business)
-                if web_result.success:
-                    enrichment_results['web_ai'] = web_result.enriched_data
+            # AI web research (fresh web data via SERP + LLM) - temporarily disabled for stability
+            # if 'web_ai' in enrichment_types:
+            #     web_result = await self._enrich_with_web_ai(business)
+            #     if web_result.success:
+            #         enrichment_results['web_ai'] = web_result.enriched_data
                     
             # Market intelligence enrichment
             if 'market_intelligence' in enrichment_types:
@@ -493,42 +493,42 @@ class EnrichmentEngine:
                 processing_time=processing_time
             )
     
-    async def _enrich_with_web_ai(self, business: NormalizedBusiness) -> EnrichmentResult:
-        """Use SERPAPI to fetch fresh web snippets and summarize with LLM."""
-        start_time = datetime.now()
-        try:
-            query = f"{business.name} {business.address.city or ''} {business.address.state or ''} owner review revenue contact".strip()
-            serp = await self.web_researcher.search_google(query)
-            summary = await self.web_researcher.summarize_snippets(query, serp.get('snippets', []))
-            enriched = {
-                'web_research': {
-                    'query': query,
-                    'snippets_used': len(serp.get('snippets', [])),
-                    'owner_candidates': summary.get('owner_candidates', []),
-                    'emails_found': summary.get('emails_found', []),
-                    'phones_found': summary.get('phones_found', []),
-                    'key_points': summary.get('key_points', []),
-                    'risk_signals': summary.get('risk_signals', []),
-                }
-            }
-            return EnrichmentResult(
-                success=True,
-                enriched_data=enriched,
-                confidence_score=0.6,
-                sources_used=['SERPAPI','OpenAI'],
-                processing_time=(datetime.now() - start_time).total_seconds()
-            )
-        except Exception as e:
-            processing_time = (datetime.now() - start_time).total_seconds()
-            return EnrichmentResult(
-                success=False,
-                enriched_data={},
-                confidence_score=0.0,
-                sources_used=['SERPAPI','OpenAI'],
-                processing_time=processing_time,
-                errors=[str(e)]
-            )
-    
+    # async def _enrich_with_web_ai(self, business: NormalizedBusiness) -> EnrichmentResult:
+    #     """Use SERPAPI to fetch fresh web snippets and summarize with LLM."""
+    #     start_time = datetime.now()
+    #     try:
+    #         query = f"{business.name} {business.address.city or ''} {business.address.state or ''} owner review revenue contact".strip()
+    #         serp = await self.web_researcher.search_google(query)
+    #         summary = await self.web_researcher.summarize_snippets(query, serp.get('snippets', []))
+    #         enriched = {
+    #             'web_research': {
+    #                 'query': query,
+    #                 'snippets_used': len(serp.get('snippets', [])),
+    #                 'owner_candidates': summary.get('owner_candidates', []),
+    #                 'emails_found': summary.get('emails_found', []),
+    #                 'phones_found': summary.get('phones_found', []),
+    #                 'key_points': summary.get('key_points', []),
+    #                 'risk_signals': summary.get('risk_signals', []),
+    #             }
+    #         }
+    #         return EnrichmentResult(
+    #             success=True,
+    #             enriched_data=enriched,
+    #             confidence_score=0.6,
+    #             sources_used=['SERPAPI','OpenAI'],
+    #             processing_time=(datetime.now() - start_time).total_seconds()
+    #         )
+    #     except Exception as e:
+    #         processing_time = (datetime.now() - start_time).total_seconds()
+    #         return EnrichmentResult(
+    #             success=False,
+    #             enriched_data={},
+    #             confidence_score=0.0,
+    #             sources_used=['SERPAPI','OpenAI'],
+    #             processing_time=processing_time,
+    #             errors=[str(e)]
+    #         )
+        
     def _apply_enrichment_results(
         self, 
         business: NormalizedBusiness, 
