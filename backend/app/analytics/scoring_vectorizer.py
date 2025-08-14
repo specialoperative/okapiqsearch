@@ -255,8 +255,8 @@ class ScoringVectorizer:
                 'zip_code_numeric': int(business.address.zip_code[:5]) if business.address.zip_code else 0,
                 
                 # Data quality
-                'data_quality_high': 1 if business.overall_quality.value == 'high' else 0,
-                'data_quality_medium': 1 if business.overall_quality.value == 'medium' else 0,
+                'data_quality_high': 1 if (getattr(business.overall_quality, 'value', business.overall_quality) == 'high') else 0,
+                'data_quality_medium': 1 if (getattr(business.overall_quality, 'value', business.overall_quality) == 'medium') else 0,
                 'num_data_sources': len(business.data_sources),
                 
                 # Enrichment flags
@@ -853,8 +853,9 @@ class ScoringVectorizer:
         feature_vector.extend(category_vector)
         
         # Data quality features
+        quality_value = getattr(business.overall_quality, 'value', business.overall_quality)
         feature_vector.extend([
-            1 if business.overall_quality.value == 'high' else 0,
+            1 if quality_value == 'high' else 0,
             len(business.data_sources),
             len(business.tags),
         ])
@@ -865,7 +866,7 @@ class ScoringVectorizer:
         
         metadata = {
             'business_name': business.name,
-            'category': business.category.value,
+            'category': getattr(business.category, 'value', business.category),
             'location': business.address.formatted_address or '',
             'revenue': business.metrics.estimated_revenue or 0,
             'rating': business.metrics.rating or 0.0
@@ -1067,7 +1068,7 @@ class ScoringVectorizer:
             confidence += 0.1
         if 'enriched_with_nlp' in business.tags:
             confidence += 0.1
-        if business.overall_quality.value == 'high':
+        if getattr(business.overall_quality, 'value', business.overall_quality) == 'high':
             confidence += 0.1
         
         return min(1.0, confidence)
@@ -1108,7 +1109,7 @@ class ScoringVectorizer:
             concerns.append("High succession risk")
         if not business.contact.website_valid:
             concerns.append("Limited digital presence")
-        if business.overall_quality.value == 'poor':
+        if getattr(business.overall_quality, 'value', business.overall_quality) == 'poor':
             concerns.append("Insufficient business data")
         
         return concerns

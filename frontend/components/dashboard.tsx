@@ -54,25 +54,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-okapi-brown-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <button onClick={() => onNavigate('landing')} className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900">
-                <ArrowLeft className="w-4 h-4" />
-                <span className="font-medium">Back</span>
-              </button>
-              <h1 className="text-2xl font-bold text-okapi-brown-800 ml-4">Dashboard</h1>
-            </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <SmoothNavLink onClick={() => onNavigate('solutions')}>Solutions</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('market-scanner')}>Scanner</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('crm')}>CRM</SmoothNavLink>
-            </nav>
-          </div>
-        </div>
-      </header>
+      {/* No secondary header under global bar */}
 
       {/* Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -90,7 +72,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           <div className="mb-8">
             <h3 className="text-2xl font-bold text-okapi-brown-900 mb-6">Three-Product Ecosystem</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <OrigamiCard pattern="okapi" className="p-6 cursor-pointer hover:shadow-lg transition-all duration-300" onClick={() => onNavigate('market-scanner')}>
+              <a href="/oppy" className="block">
+              <OrigamiCard pattern="okapi" className="p-6 cursor-pointer hover:shadow-lg transition-all duration-300">
                 <div className="flex items-center mb-4">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                     <Search className="w-5 h-5 text-white" />
@@ -115,8 +98,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                 </div>
               </OrigamiCard>
+              </a>
 
-              <OrigamiCard pattern="cheetah" className="p-6 cursor-pointer hover:shadow-lg transition-all duration-300" onClick={() => onNavigate('market-analysis')}>
+              <a href="/solutions" className="block">
+              <OrigamiCard pattern="cheetah" className="p-6 cursor-pointer hover:shadow-lg transition-all duration-300">
                 <div className="flex items-center mb-4">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <Building2 className="w-5 h-5 text-white" />
@@ -141,8 +126,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                 </div>
               </OrigamiCard>
+              </a>
 
-              <OrigamiCard pattern="leopard" className="p-6 cursor-pointer hover:shadow-lg transition-all duration-300" onClick={() => onNavigate('crm')}>
+              <a href="/crm" className="block">
+              <OrigamiCard pattern="leopard" className="p-6 cursor-pointer hover:shadow-lg transition-all duration-300">
                 <div className="flex items-center mb-4">
                   <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                     <Users className="w-5 h-5 text-white" />
@@ -167,6 +154,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                 </div>
               </OrigamiCard>
+              </a>
             </div>
           </div>
         </SmoothReveal>
@@ -226,22 +214,22 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <OrigamiCard pattern="lion" className="p-8">
               <h3 className="text-2xl font-bold text-okapi-brown-900 mb-4">Quick Actions</h3>
               <div className="space-y-4">
-                <PallyButton onClick={() => onNavigate('market-scanner')} className="w-full justify-start">
+              <a href="/oppy" className="w-full inline-flex"><PallyButton className="w-full justify-start">
                   <Search className="w-5 h-5 mr-3" />
                   New Market Scan
-                </PallyButton>
-                <PallyButton variant="secondary" onClick={() => onNavigate('crm')} className="w-full justify-start">
+              </PallyButton></a>
+              <a href="/crm" className="w-full inline-flex"><PallyButton variant="secondary" className="w-full justify-start">
                   <Users className="w-5 h-5 mr-3" />
                   View CRM
-                </PallyButton>
-                <PallyButton variant="secondary" onClick={() => onNavigate('market-analysis')} className="w-full justify-start">
+              </PallyButton></a>
+              <a href="/solutions" className="w-full inline-flex"><PallyButton variant="secondary" className="w-full justify-start">
                   <BarChart3 className="w-5 h-5 mr-3" />
                   Market Analysis
-                </PallyButton>
-                <PallyButton variant="secondary" onClick={() => onNavigate('case-studies')} className="w-full justify-start">
+              </PallyButton></a>
+              <a href="/solutions" className="w-full inline-flex"><PallyButton variant="secondary" className="w-full justify-start">
                   <Target className="w-5 h-5 mr-3" />
                   Case Studies
-                </PallyButton>
+              </PallyButton></a>
               </div>
             </OrigamiCard>
           </SmoothReveal>

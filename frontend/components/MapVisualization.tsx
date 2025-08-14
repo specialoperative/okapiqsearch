@@ -65,6 +65,7 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [clusters, setClusters] = useState<Business[][]>([]);
   const mapRef = useRef<L.Map | null>(null);
+  const [crimeHeatPoints, setCrimeHeatPoints] = useState<Array<[number, number, number]>>([]);
 
   // Get coordinates for location
   useEffect(() => {
@@ -86,6 +87,38 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({
     if (location) {
       getCoordinates();
     }
+  }, [location]);
+
+  // Fetch live crime heat points for this view
+  useEffect(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const url = new URL(`${apiBase}/analytics/crime-heat`);
+    if (location) url.searchParams.set('city', location);
+    url.searchParams.set('provider', 'crimeometer');
+    url.searchParams.set('days_back', '180');
+    url.searchParams.set('limit', '4000');
+    const controller = new AbortController();
+    const run = async () => {
+      try {
+        const resp = await fetch(url.toString(), { signal: controller.signal });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const pts: Array<[number, number, number]> = Array.isArray(data?.points)
+          ? data.points
+              .map((p: any) => {
+                const lat = p?.position?.[0];
+                const lng = p?.position?.[1];
+                const w = typeof p?.intensity === 'number' ? p.intensity : 0.5;
+                if (typeof lat === 'number' && typeof lng === 'number') return [lat, lng, Math.max(0.05, Math.min(1, w))] as [number, number, number];
+                return null;
+              })
+              .filter(Boolean)
+          : [];
+        setCrimeHeatPoints(pts);
+      } catch {}
+    };
+    run();
+    return () => controller.abort();
   }, [location]);
 
   // Filter businesses based on criteria
@@ -299,6 +332,19 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
+        {/* Simple heat visualization using circles (keeps bundle light without heat plugin) */}
+        {crimeHeatPoints.slice(0, 2000).map((p, idx) => (
+          <Circle
+            key={`crime-${idx}`}
+            center={[p[0], p[1]] as any}
+            radius={120}
+            pathOptions={{
+              color: 'rgba(220,38,38,0.5)',
+              fillColor: 'rgba(220,38,38,0.3)',
+              fillOpacity: Math.min(0.8, Math.max(0.2, p[2]))
+            }}
+          />
+        ))}
         
         {/* Render individual businesses */}
         {filteredBusinesses.map((business) => {

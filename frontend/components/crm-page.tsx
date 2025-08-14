@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SmoothReveal, StaggeredReveal, PallyButton, OrigamiCard, SmoothNavLink } from '../ui/smooth-components';
 import { ArrowLeft, Users, Building2, Target, Zap, TrendingUp, Phone, Mail, MapPin, DollarSign, Calendar, Star, Filter, Plus, Search, Eye, Edit, Trash2, BarChart3 } from 'lucide-react';
 
@@ -12,6 +12,92 @@ export default function CRMPage({ onNavigate }: CRMPageProps) {
   const [activeTab, setActiveTab] = useState('leads');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
+
+  // Lightweight auth state (localStorage-backed)
+  const [user, setUser] = useState<{ id: string; email?: string; provider: string } | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<'signup'|'signin'>('signup');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('okapiq_user');
+      if (raw) setUser(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const persistUser = (u: { id: string; email?: string; provider: string }) => {
+    setUser(u);
+    try { localStorage.setItem('okapiq_user', JSON.stringify(u)); } catch {}
+  };
+
+  const signInWithGoogle = () => {
+    persistUser({ id: `gg_${Date.now()}`, email: undefined, provider: 'google' });
+    setShowAuth(false);
+  };
+
+  const createAccount = () => {
+    if (!authEmail || !authPassword) return;
+    try {
+      const usersRaw = localStorage.getItem('okapiq_users');
+      const users = usersRaw ? JSON.parse(usersRaw) : {};
+      if (users[authEmail]) {
+        alert('Account exists. Please sign in.');
+        setAuthMode('signin');
+        return;
+      }
+      users[authEmail] = { email: authEmail, password: authPassword };
+      localStorage.setItem('okapiq_users', JSON.stringify(users));
+      persistUser({ id: `pw_${Date.now()}`, email: authEmail, provider: 'password' });
+      setShowAuth(false);
+    } catch {}
+  };
+
+  const signInEmail = () => {
+    try {
+      const usersRaw = localStorage.getItem('okapiq_users');
+      const users = usersRaw ? JSON.parse(usersRaw) : {};
+      if (users[authEmail] && users[authEmail].password === authPassword) {
+        persistUser({ id: `pw_${Date.now()}`, email: authEmail, provider: 'password' });
+        setShowAuth(false);
+      } else {
+        alert('Invalid credentials');
+      }
+    } catch {}
+  };
+
+  // Notes state per entity
+  const [showNoteFor, setShowNoteFor] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [notes, setNotes] = useState<Record<string, { id: string; text: string; ts: number; author?: string }[]>>({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('okapiq_notes');
+      if (raw) setNotes(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const persistNotes = (n: typeof notes) => {
+    setNotes(n);
+    try { localStorage.setItem('okapiq_notes', JSON.stringify(n)); } catch {}
+  };
+
+  const openNote = (entityKey: string) => {
+    if (!user) { setShowAuth(true); return; }
+    setShowNoteFor(entityKey);
+    setNoteDraft('');
+  };
+
+  const saveNote = () => {
+    if (!showNoteFor || !user || !noteDraft.trim()) return;
+    const entry = { id: `${Date.now()}`, text: noteDraft.trim(), ts: Date.now(), author: user.email || user.provider };
+    const next = { ...notes, [showNoteFor]: [entry, ...(notes[showNoteFor] || [])] };
+    persistNotes(next);
+    setShowNoteFor(null);
+    setNoteDraft('');
+  };
 
   const mockLeads = [
     {
@@ -125,26 +211,9 @@ export default function CRMPage({ onNavigate }: CRMPageProps) {
   });
 
   return (
+    <>
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-okapi-brown-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <button onClick={() => onNavigate('landing')} className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900">
-                <ArrowLeft className="w-4 h-4" />
-                <span className="font-medium">Back</span>
-              </button>
-              <h1 className="text-2xl font-bold text-okapi-brown-800 ml-4">CRM</h1>
-            </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <SmoothNavLink onClick={() => onNavigate('market-scanner')}>Scanner</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('market-analysis')}>Analysis</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('dashboard')}>Dashboard</SmoothNavLink>
-            </nav>
-          </div>
-        </div>
-      </header>
+      {/* No duplicate top-of-page nav below global bar */}
 
       {/* CRM Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -234,6 +303,7 @@ export default function CRMPage({ onNavigate }: CRMPageProps) {
                         <button className="p-1 text-red-400 hover:text-red-600">
                           <Trash2 className="w-4 h-4" />
                         </button>
+                        <button onClick={() => openNote(`lead-${lead.id}`)} className="px-2 py-1 text-xs rounded bg-okapi-brown-100 text-okapi-brown-800 hover:bg-okapi-brown-200">Add Note</button>
                       </div>
                     </div>
 
@@ -283,6 +353,15 @@ export default function CRMPage({ onNavigate }: CRMPageProps) {
                           </button>
                         </div>
                       </div>
+                      {(notes[`lead-${lead.id}`] || []).slice(0,3).map(n => (
+                        <div key={n.id} className="mt-2 text-xs text-okapi-brown-700 bg-okapi-brown-50 border border-okapi-brown-200 rounded p-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">Note</span>
+                            <span className="text-[10px] text-okapi-brown-500">{new Date(n.ts).toLocaleString()}</span>
+                          </div>
+                          <div className="mt-1">{n.text}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -337,7 +416,7 @@ export default function CRMPage({ onNavigate }: CRMPageProps) {
                         <div>
                           <p className="text-sm font-medium text-okapi-brown-900">{deal.contact}</p>
                         </div>
-                        <div className="flex gap-2">
+                      <div className="flex gap-2">
                           <PallyButton size="sm" variant="secondary">
                             <Calendar className="w-4 h-4 mr-2" />
                             Schedule Call
@@ -346,8 +425,18 @@ export default function CRMPage({ onNavigate }: CRMPageProps) {
                             <DollarSign className="w-4 h-4 mr-2" />
                             Update Deal
                           </PallyButton>
+                          <button onClick={() => openNote(`deal-${deal.id}`)} className="px-2 py-1 text-xs rounded bg-okapi-brown-100 text-okapi-brown-800 hover:bg-okapi-brown-200">Add Note</button>
                         </div>
                       </div>
+                      {(notes[`deal-${deal.id}`] || []).slice(0,3).map(n => (
+                        <div key={n.id} className="mt-2 text-xs text-okapi-brown-700 bg-okapi-brown-50 border border-okapi-brown-200 rounded p-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">Note</span>
+                            <span className="text-[10px] text-okapi-brown-500">{new Date(n.ts).toLocaleString()}</span>
+                          </div>
+                          <div className="mt-1">{n.text}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -378,5 +467,43 @@ export default function CRMPage({ onNavigate }: CRMPageProps) {
         </SmoothReveal>
       </div>
     </div>
+
+    {/* Auth Modal */}
+    {showAuth && (
+      <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-okapi-brown-200 p-5 w-full max-w-sm">
+          <h3 className="text-lg font-bold mb-2">Sign in to save notes</h3>
+          <p className="text-sm text-okapi-brown-600 mb-3">Create an account with email or continue with Google.</p>
+          <div className="space-y-3">
+            <button onClick={signInWithGoogle} className="w-full py-2 rounded-lg bg-emerald-600 text-white font-semibold">Continue with Google</button>
+            <div className="border-t" />
+            <input value={authEmail} onChange={e=>setAuthEmail(e.target.value)} placeholder="Email" className="w-full px-3 py-2 border rounded" />
+            <input value={authPassword} onChange={e=>setAuthPassword(e.target.value)} placeholder="Password" type="password" className="w-full px-3 py-2 border rounded" />
+            {authMode === 'signup' ? (
+              <button onClick={createAccount} className="w-full py-2 rounded-lg bg-gray-900 text-white font-semibold">Create Account</button>
+            ) : (
+              <button onClick={signInEmail} className="w-full py-2 rounded-lg bg-gray-900 text-white font-semibold">Sign In</button>
+            )}
+            <button onClick={()=>setAuthMode(authMode==='signup'?'signin':'signup')} className="w-full py-2 rounded-lg bg-gray-100 text-gray-900">{authMode==='signup'?'Have an account? Sign in':'New here? Create account'}</button>
+            <button onClick={()=>setShowAuth(false)} className="w-full py-2 rounded-lg bg-white border">Cancel</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Note Modal */}
+    {showNoteFor && (
+      <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-okapi-brown-200 p-5 w-full max-w-md">
+          <h3 className="text-lg font-bold mb-2">New Note</h3>
+          <textarea value={noteDraft} onChange={e=>setNoteDraft(e.target.value)} rows={5} className="w-full border rounded p-2" placeholder="Write your note..." />
+          <div className="mt-3 flex gap-2 justify-end">
+            <button onClick={()=>setShowNoteFor(null)} className="px-3 py-2 rounded bg-gray-100 text-gray-900">Cancel</button>
+            <button onClick={saveNote} className="px-3 py-2 rounded bg-emerald-600 text-white">Save Note</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 } 

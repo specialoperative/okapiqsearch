@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { US_CRIME_HEAT_POINTS } from '@/components/../lib/crimeHeat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Search, TrendingUp, Users, Building2, Target, Zap, BarChart3, Filter, MapPin, DollarSign, Calendar, Star, Phone, Mail, ExternalLink, AlertCircle, CheckCircle, Map, Globe, Database, Shield, Activity, Menu } from 'lucide-react';
-import InteractiveMap from './interactive-map';
+// Avoid SSR importing of Leaflet by dynamically loading the map component on the client only
+const InteractiveMap = dynamic(() => import('./interactive-map'), { ssr: false });
 
 interface MarketScannerPageProps {
   onNavigate?: (page: string) => void;
@@ -24,9 +27,13 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   const [success, setSuccess] = useState<string | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [recentScans, setRecentScans] = useState<any[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
+  const [resolvedAddresses, setResolvedAddresses] = useState<Record<string | number, string>>({});
+  // High-crime city coordinates for lightweight heat overlay
+  const computeCrimeHeatPoints = () => US_CRIME_HEAT_POINTS;
   // Removed API Online badge per request
   const [working, setWorking] = useState<{active: boolean; step: string}>({active: false, step: ''});
   const workingSteps = [
@@ -41,6 +48,14 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     google_maps: true,
     google_serp: true,
     yelp: true,
+    // Apify actors
+    apify_gmaps: true,
+    apify_gmaps_email: false,
+    apify_gmaps_websites: false,
+    apify_website_crawler: false,
+    apify_apollo: false,
+    apify_linkedin_jobs: false,
+    // Other signals
     linkedin: false,
     sba_records: false,
   });
@@ -49,6 +64,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     fragmentation: true,
     linkedinSignals: true,
   });
+
+  const patternBg = '';
 
   // If an initialLocation is provided (e.g., from /oppy?location=...), seed the input and auto-run once
   useEffect(() => {
@@ -61,6 +78,17 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLocation]);
+
+  // Auto-run a default scan on first load to ensure cards render for demos
+  useEffect(() => {
+    if (initialLocation) return;
+    if (searchTerm.trim().length === 0) {
+      setSearchTerm('San Francisco');
+      const id = window.setTimeout(() => { void handleScan(); }, 100);
+      return () => window.clearTimeout(id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Geolocate on mount to preset map center
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -105,9 +133,12 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     setError(null);
     setSuccess(null);
 
+    let advancer: number | undefined;
+    let timeoutId: number | undefined;
+
     try {
       // advance step hints while waiting for API
-      const advancer = window.setInterval(() => {
+      advancer = window.setInterval(() => {
         setWorkingIndex((i) => {
           const ni = Math.min(i + 1, workingSteps.length - 1);
           setWorking({ active: true, step: workingSteps[ni] });
@@ -115,17 +146,29 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         });
       }, 900);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/intelligence/scan`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller.abort(), 30000);
+
+      const response = await fetch(`${apiBase}/intelligence/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
         body: JSON.stringify({
           location: searchTerm,
           industry: selectedIndustry || 'hvac',
           radius_miles: radiusMiles,
           max_businesses: 50,
-          data_sources: Object.entries(sources).filter(([, v]) => v).map(([k]) => k),
+          crawl_sources: Object.entries(sources).filter(([, v]) => v).map(([k]) => k),
+          enrichment_types: advFilters.includeRisk
+            ? ['census','irs','sos','nlp','market_intelligence','web_ai']
+            : ['census','irs','sos','nlp','market_intelligence'],
+          analysis_types: advFilters.fragmentation
+            ? ['succession_risk','tam_opportunity','market_fragmentation','growth_potential','acquisition_attractiveness','lead_score']
+            : ['succession_risk','tam_opportunity','growth_potential','acquisition_attractiveness','lead_score'],
+          use_cache: false,
           filters: {
             include_succession_risk: advFilters.includeRisk,
             enable_fragmentation: advFilters.fragmentation,
@@ -145,6 +188,11 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       setScanResults(data);
       setSuccess(`Found ${data.businesses?.length || 0} businesses in ${searchTerm}`);
       setWorking({ active: false, step: '' });
+      if (advancer !== undefined) window.clearInterval(advancer);
+      // Bring results into view so users see cards immediately
+      window.setTimeout(() => {
+        try { resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+      }, 50);
       
       // Add to recent scans
       setRecentScans(prev => [{
@@ -160,13 +208,26 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       setWorking({ active: false, step: '' });
     } finally {
       setIsScanning(false);
-      // stop advancer if running
-      try { window.clearInterval as any } catch {}
+      if (advancer !== undefined) window.clearInterval(advancer);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
     }
   };
 
   const handleBusinessClick = (business: any) => {
     setSelectedBusiness(business);
+  };
+
+  const focusBusinessOnMap = (b: any) => {
+    setViewMode('map');
+    setSelectedBusiness(b);
+    const coordArray = Array.isArray(b?.address?.coordinates)
+      ? b.address.coordinates
+      : (Array.isArray(b?.coordinates) ? b.coordinates : null);
+    const lat = b?.location?.lat ?? b?.lat ?? b?.coordinates?.lat ?? (coordArray ? coordArray[0] : undefined);
+    const lng = b?.location?.lng ?? b?.lng ?? b?.coordinates?.lng ?? (coordArray ? coordArray[1] : undefined);
+    if (typeof window !== 'undefined' && typeof lat === 'number' && typeof lng === 'number') {
+      (window as any).__scannerFocus = { lat, lng };
+    }
   };
 
   const formatCurrency = (amount: number | undefined) => {
@@ -190,24 +251,94 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     return 'Low Risk';
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-okapi-brown-50 via-white to-okapi-brown-50">
-      {/* Subtle Background Pattern */}
-      <div 
-        className="fixed inset-0 opacity-3 pointer-events-none"
-        style={{
-          background: `
-            repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 20px,
-              rgba(139, 69, 19, 0.03) 20px,
-              rgba(139, 69, 19, 0.03) 40px
-            )
-          `
-        }}
-      />
+  // Display the best-available street line. Prefer explicit street fields; otherwise parse from formatted text.
+  const getStreetAddress = (b: any): string => {
+    const candidates = [
+      b?.address?.line1,
+      b?.address_line1,
+      b?.address_line,
+      b?.street_address,
+      b?.street,
+      b?.address?.street
+    ];
+    for (const c of candidates) {
+      if (typeof c === 'string' && c.trim()) return c.trim();
+    }
+    const formatted = b?.address_formatted || b?.address?.formatted_address || b?.formatted_address || '';
+    if (typeof formatted === 'string' && formatted.trim()) {
+      // If the first comma-separated segment looks like a street (contains a number), use it
+      const first = formatted.split(',')[0]?.trim() || '';
+      const looksLikeStreet = /\d{1,6}\s+.+/.test(first) || /(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)/i.test(first);
+      if (looksLikeStreet) return first;
+      // Otherwise, search anywhere in the string for a street-like pattern
+      const m = formatted.match(/\d{1,6}\s+[^,]+?(?:\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln|Way|Place|Pl))\b/i);
+      if (m && m[0]) return m[0].trim();
+    }
+    // As a last resort, try resolved map focus (set elsewhere)
+    const id = b?.business_id || b?.id || b?.name;
+    if (id && resolvedAddresses[id]) return resolvedAddresses[id];
+    return 'Address unavailable';
+  };
 
+  // Compose City, State Zip if available or parse from formatted
+  const getCityStateZip = (b: any): string => {
+    const city = b?.city || b?.address?.city;
+    const state = b?.state || b?.address?.state;
+    const zip = b?.zip_code || b?.zipcode || b?.address?.zip_code || b?.address?.postal_code;
+    if (city || state || zip) {
+      const left = [city, state].filter(Boolean).join(', ');
+      return [left, zip].filter(Boolean).join(' ');
+    }
+    const formatted = b?.address_formatted || b?.address?.formatted_address || b?.formatted_address || '';
+    if (typeof formatted === 'string' && formatted.trim()) {
+      // Try to capture the City, ST ZIP portion after the first comma
+      const parts = formatted.split(',').map((s:string)=>s.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        const tail = parts.slice(1).join(', ');
+        // Normalize common patterns like "City, ST 12345" or "City ST 12345"
+        const m = tail.match(/([A-Za-z .'-]+),?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?/);
+        if (m) {
+          return [m[1], [m[2], m[3]].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+        }
+        return tail;
+      }
+    }
+    return '';
+  };
+
+  // Opportunistically resolve missing street lines via Nominatim using business name + city
+  useEffect(() => {
+    const businesses: any[] = Array.isArray(scanResults?.businesses) ? scanResults.businesses : [];
+    if (!businesses.length) return;
+    const run = async () => {
+      for (const b of businesses) {
+        const id = b?.business_id || b?.id || b?.name;
+        if (!id || resolvedAddresses[id]) continue;
+        const street = getStreetAddress(b);
+        const looksMissing = !(typeof street === 'string' && /\d/.test(street));
+        if (!looksMissing) continue;
+        const cityLine = getCityStateZip(b) || searchTerm;
+        const q = [b?.name, cityLine].filter(Boolean).join(' ');
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`;
+          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const data = await resp.json();
+          if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
+            const addr = data[0].address as any;
+            const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
+            if (line1 && /\d/.test(line1)) {
+              setResolvedAddresses(prev => ({ ...prev, [id]: line1 }));
+            }
+          }
+        } catch {}
+      }
+    };
+    run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(scanResults?.businesses)]);
+
+  return (
+    <div className="min-h-screen bg-[#fcfbfa]">
       <div className="relative z-10">
         {/* Header (optional) */}
         {showHeader && (
@@ -278,26 +409,34 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
             className="bg-white rounded-2xl shadow-xl border border-okapi-brown-200 p-6 mb-8"
           >
           <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
-              {/* Location Input */}
+              {/* Location Input + Search */}
               <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-okapi-brown-700 mb-2">
                   Location *
                 </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-okapi-brown-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Enter city, state, or zip code"
-                    className="w-full pl-10 pr-4 py-3 border border-okapi-brown-300 rounded-lg focus:ring-2 focus:ring-okapi-brown-500 focus:border-okapi-brown-500 transition-colors"
-                  />
+                <div className="flex items-stretch gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-okapi-brown-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Enter city, state, or zip code"
+                      className="w-full pl-10 pr-4 py-3 border border-okapi-brown-300 rounded-lg focus:ring-2 focus:ring-okapi-brown-500 focus:border-okapi-brown-500 transition-colors"
+                    />
+                  </div>
+                  <button
+                    onClick={() => void handleScan()}
+                    className="px-4 py-3 rounded-lg bg-okapi-brown-600 hover:bg-okapi-brown-700 text-white font-semibold shadow-sm"
+                  >
+                    Search
+                  </button>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {popularLocations.slice(0, 6).map((location) => (
                     <button
                       key={location}
-                      onClick={() => setSearchTerm(location)}
+                      onClick={() => { setSearchTerm(location); const id = window.setTimeout(() => { void handleScan(); }, 10); window.setTimeout(() => window.clearTimeout(id), 1000); }}
                       className="px-3 py-1 text-xs bg-okapi-brown-100 text-okapi-brown-700 rounded-full hover:bg-okapi-brown-200 transition-colors"
                     >
                       {location}
@@ -372,29 +511,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                 </select>
               </div>
 
-              {/* Scan Button */}
-              <div className="flex items-end">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleScan}
-                  disabled={isScanning}
-                  className="w-full bg-gradient-to-r from-okapi-brown-600 to-okapi-brown-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-okapi-brown-700 hover:to-okapi-brown-800 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isScanning ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>Scanning...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center space-x-2">
-                      <Target className="w-5 h-5" />
--                      <span>Scan Market</span>
-+                      <span>Start Market Scan</span>
-                    </div>
-                  )}
-                </motion.button>
-              </div>
+              {/* Note: searches use the Location "Search" button. Former scan button removed. */}
             </div>
 
             {/* Advanced Filters Toggle */}
@@ -455,7 +572,114 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
             </div>
           )}
 
-          {/* Intelligence Sources + Advanced Filters side panel */}
+          {/* Results Section moved ABOVE side panels to ensure immediate visibility */}
+          <div ref={resultsRef} />
+          {scanResults && (
+            <motion.div 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="space-y-6 mb-8"
+            >
+              {/* Success Message */}
+              {success && (
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-green-50 border border-green-200 rounded-lg p-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="text-green-800 font-medium">{success}</span>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Error Message */}
+              {error && (
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-red-50 border border-red-200 rounded-lg p-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <span className="text-red-800 font-medium">{error}</span>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* View Toggle */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-okapi-brown-900">Market Results</h2>
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-okapi-brown-600">{scanResults.businesses?.length || 0} businesses found</span>
+                </div>
+              </div>
+
+              {/* List View */}
+              {viewMode === 'list' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(scanResults.businesses || []).map((business: any, index: number) => (
+                    <motion.div
+                      key={`${business.name}-${index}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-white rounded-xl shadow-lg border border-okapi-brown-200 overflow-hidden hover:shadow-xl transition-all duration-300"
+                    >
+                      <div className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-okapi-brown-900">{business.name || 'Unknown Business'}</h3>
+                          <div className="flex items-center space-x-1">
+                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                            <span className="text-sm text-okapi-brown-600">{business.rating || 'N/A'}</span>
+                          </div>
+                        </div>
+                        {Array.isArray(business.tags) && business.tags.some((t:string)=> t.includes('enriched_with_web_ai') || t.includes('enriched_with_nlp')) && (
+                          <div className="mb-3 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> AI-enhanced
+                          </div>
+                        )}
+                        <div className="space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <h3 className="text-lg font-semibold text-okapi-brown-900">{business.name || 'Unknown Business'}</h3>
+                              <div className="text-sm text-okapi-brown-600">
+                                <div>{resolvedAddresses[business?.business_id || business?.id || business?.name] || getStreetAddress(business)}</div>
+                                <div className="flex gap-4">
+                                  <span>{getCityStateZip(business)}</span>
+                                  <span>{business?.contact?.phone || business.phone || 'Phone not available'}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200">
+                              <span className="text-emerald-700 text-xl font-bold">{(business?.analysis?.lead_score?.overall_score ?? business.lead_score ?? 0) as any}</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <div className="flex justify-between"><span className="text-okapi-brown-500">Business Type</span><span className="text-okapi-brown-900 font-medium">{business?.business_type || business?.category || 'N/A'}</span></div>
+                            <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(business?.contact?.website || business?.website) ? (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={business?.contact?.website || business?.website} target="_blank" rel="noopener noreferrer">{business?.contact?.website || business?.website}</a>) : (<span className="text-okapi-brown-900 font-medium">N/A</span>)}</div>
+                            <div className="flex justify-between"><span className="text-okapi-brown-500">Gmap rating</span><span className="text-okapi-brown-900 font-medium">{business?.gmap_rating ?? business?.metrics?.rating ?? 'N/A'}</span></div>
+                            <div className="flex justify-between"><span className="text-okapi-brown-500">Source</span><span className="text-okapi-brown-900 font-medium">{business?.source || (Array.isArray(business?.data_sources) ? business.data_sources.join(', ') : 'N/A')}</span></div>
+                          </div>
+                          <div className="flex items-center justify-between pt-3 border-t border-okapi-brown-100">
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskColor(business?.analysis?.succession_risk?.risk_score ?? business.succession_risk_score)}`}>{getRiskLevel(business?.analysis?.succession_risk?.risk_score ?? business.succession_risk_score)}</span>
+                            <div className="flex items-center gap-3">
+                              {(business?.contact?.website || business.website) && (<a href={business?.contact?.website || business.website} target="_blank" rel="noopener noreferrer" className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"><ExternalLink className="w-4 h-4" /></a>)}
+                              <button onClick={() => focusBusinessOnMap(business)} className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"><MapPin className="w-4 h-4" /></button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Intelligence Sources + Advanced Filters side panel (moved below results) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl shadow border border-okapi-brown-200 p-6">
               <h3 className="text-xl font-bold text-okapi-brown-900 mb-4">Intelligence Sources</h3>
@@ -465,6 +689,27 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                   <span>
                     <span className="font-medium">Google Maps</span>
                     <div className="text-okapi-brown-600 text-xs">Local results, ratings, reviews</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.apify_gmaps} onChange={e=>setSources(s=>({...s,apify_gmaps:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Apify Google Maps Scraper</span>
+                    <div className="text-okapi-brown-600 text-xs">Turbo GMaps actor (fast, resilient)</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.apify_gmaps_email} onChange={e=>setSources(s=>({...s,apify_gmaps_email:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Apify GMaps Email Extractor</span>
+                    <div className="text-okapi-brown-600 text-xs">Emails from listings/websites</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.apify_gmaps_websites} onChange={e=>setSources(s=>({...s,apify_gmaps_websites:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Apify GMaps + Websites</span>
+                    <div className="text-okapi-brown-600 text-xs">Leads + website scraping</div>
                   </span>
                 </label>
                 <label className="flex items-start gap-3">
@@ -479,6 +724,34 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                   <span>
                     <span className="font-medium">Yelp Intelligence</span>
                     <div className="text-okapi-brown-600 text-xs">Owner detection, sentiment analysis</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={Boolean((sources as any).firecrawl)} onChange={e=>setSources(s=>({...s, firecrawl: e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Firecrawl</span>
+                    <div className="text-okapi-brown-600 text-xs">Hosted scraping fallback</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.apify_website_crawler} onChange={e=>setSources(s=>({...s,apify_website_crawler:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Apify Website Crawler</span>
+                    <div className="text-okapi-brown-600 text-xs">Content for NLP enrichment</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.apify_apollo} onChange={e=>setSources(s=>({...s,apify_apollo:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Apify Apollo</span>
+                    <div className="text-okapi-brown-600 text-xs">Firmographics, contacts</div>
+                  </span>
+                </label>
+                <label className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1" checked={sources.apify_linkedin_jobs} onChange={e=>setSources(s=>({...s,apify_linkedin_jobs:e.target.checked}))} />
+                  <span>
+                    <span className="font-medium">Apify LinkedIn Jobs</span>
+                    <div className="text-okapi-brown-600 text-xs">Hiring and activity signals</div>
                   </span>
                 </label>
                 <label className="flex items-start gap-3">
@@ -527,8 +800,12 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
             >
               <InteractiveMap 
                 businesses={(scanResults?.businesses || []).map((b:any, i:number)=>{
-                  const lat = b?.location?.lat ?? b?.lat ?? b?.coordinates?.lat;
-                  const lng = b?.location?.lng ?? b?.lng ?? b?.coordinates?.lng;
+                  // normalize possible coordinate shapes (API returns address.coordinates)
+                  const coordArray = Array.isArray(b?.address?.coordinates)
+                    ? b.address.coordinates
+                    : (Array.isArray(b?.coordinates) ? b.coordinates : null);
+                  const lat = b?.location?.lat ?? b?.lat ?? b?.coordinates?.lat ?? (coordArray ? coordArray[0] : undefined);
+                  const lng = b?.location?.lng ?? b?.lng ?? b?.coordinates?.lng ?? (coordArray ? coordArray[1] : undefined);
                   if (typeof lat !== 'number' || typeof lng !== 'number') return null;
                   return {
                     id: b.business_id || b.id || i,
@@ -540,176 +817,29 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                 }).filter(Boolean)}
                 center={(scanResults?.center && typeof scanResults.center.lat==='number' && typeof scanResults.center.lng==='number') ? [scanResults.center.lat, scanResults.center.lng] : userCenter}
                 onBusinessClick={handleBusinessClick}
+                showHeat={true}
+                fitToBusinesses={false}
+                zoom={4}
+                markerItems={(scanResults?.businesses || []).map((b:any, i:number)=>{
+                  const coordArray = Array.isArray(b?.address?.coordinates)
+                    ? b.address.coordinates
+                    : (Array.isArray(b?.coordinates) ? b.coordinates : null);
+                  const lat = b?.location?.lat ?? b?.lat ?? b?.coordinates?.lat ?? (coordArray ? coordArray[0] : undefined);
+                  const lng = b?.location?.lng ?? b?.lng ?? b?.coordinates?.lng ?? (coordArray ? coordArray[1] : undefined);
+                  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+                  return {
+                    id: b.business_id || b.id || i,
+                    name: b.name || b.business_name || 'Business',
+                    position: [lat, lng] as [number, number]
+                  };
+                }).filter(Boolean)}
                 heightClassName="h-[520px]"
+                crimeCity={searchTerm}
+                crimeDaysBack={180}
               />
             </motion.div>
           )}
 
-          {/* Results Section */}
-          {scanResults && (
-            <motion.div 
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="space-y-6"
-            >
-              {/* Success Message */}
-              {success && (
-                <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="bg-green-50 border border-green-200 rounded-lg p-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-green-800 font-medium">{success}</span>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="bg-red-50 border border-red-200 rounded-lg p-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <AlertCircle className="w-5 h-5 text-red-600" />
-                    <span className="text-red-800 font-medium">{error}</span>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* View Toggle */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-okapi-brown-900">
-                  Market Results
-                </h2>
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-okapi-brown-600">
-                    {scanResults.businesses?.length || 0} businesses found
-                  </span>
-                </div>
-              </div>
-
-              {/* List View */}
-              {viewMode === 'list' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {scanResults.businesses?.map((business: any, index: number) => (
-                    <motion.div
-                      key={`${business.name}-${index}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-white rounded-xl shadow-lg border border-okapi-brown-200 overflow-hidden hover:shadow-xl transition-all duration-300"
-                    >
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <h3 className="text-lg font-semibold text-okapi-brown-900">
-                            {business.name || 'Unknown Business'}
-                          </h3>
-                          <div className="flex items-center space-x-1">
-                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                            <span className="text-sm text-okapi-brown-600">
-                              {business.rating || 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* AI badge if enriched */}
-                        {Array.isArray(business.tags) && business.tags.some((t:string)=> t.includes('enriched_with_web_ai') || t.includes('enriched_with_nlp')) && (
-                          <div className="mb-3 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> AI-enhanced
-                          </div>
-                        )}
-
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm text-okapi-brown-600">
-                            <div className="flex items-center space-x-4">
-                              <span>{business.address || 'Address not available'}</span>
-                              <span>{business.phone || 'Phone not available'}</span>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="flex items-center space-x-2">
-                              <DollarSign className="h-4 w-4 text-okapi-brown-400" />
-                              <div>
-                                <p className="text-xs text-okapi-brown-500">Revenue</p>
-                                <p className="text-sm font-medium text-okapi-brown-900">
-                                  {formatCurrency(business.estimated_revenue)}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <Users className="h-4 w-4 text-okapi-brown-400" />
-                              <div>
-                                <p className="text-xs text-okapi-brown-500">Employees</p>
-                                <p className="text-sm font-medium text-okapi-brown-900">
-                                  {business.employee_count || 'N/A'}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="h-4 w-4 text-okapi-brown-400" />
-                              <div>
-                                <p className="text-xs text-okapi-brown-500">Years</p>
-                                <p className="text-sm font-medium text-okapi-brown-900">
-                                  {business.years_in_business || 'N/A'}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <TrendingUp className="h-4 w-4 text-okapi-brown-400" />
-                              <div>
-                                <p className="text-xs text-okapi-brown-500">Lead Score</p>
-                                <p className={`text-sm font-medium ${
-                                  business.lead_score >= 80 ? 'text-green-600' :
-                                  business.lead_score >= 60 ? 'text-yellow-600' : 'text-red-600'
-                                }`}>
-                                  {business.lead_score || 'N/A'}%
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-3 border-t border-okapi-brown-100">
-                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                              getRiskColor(business.succession_risk_score)
-                            }`}>
-                              {getRiskLevel(business.succession_risk_score)}
-                            </span>
-                            <div className="flex items-center space-x-2">
-                              {business.website && (
-                                <a
-                                  href={business.website}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </a>
-                              )}
-                              <button
-                                onClick={() => handleBusinessClick(business)}
-                                className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"
-                              >
-                                <MapPin className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
 
           {/* Recent Scans */}
           {recentScans.length > 0 && (

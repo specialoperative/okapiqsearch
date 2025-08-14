@@ -12,26 +12,8 @@ interface SolutionsPageProps {
 export default function SolutionsPage({ onNavigate }: SolutionsPageProps) {
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-okapi-brown-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <button onClick={() => onNavigate('landing')} className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-900">
-                <ArrowLeft className="w-4 h-4" />
-                <span className="font-medium">Back</span>
-              </button>
-              <h1 className="text-2xl font-bold text-okapi-brown-800 ml-4">Our Solutions</h1>
-            </div>
-            <nav className="hidden md:flex items-center space-x-8">
-              <a href="/market-intelligence" className="nav-link">Dashboard</a>
-              <SmoothNavLink onClick={() => onNavigate('market-scanner')}>Scanner</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('market-analysis')}>Analysis</SmoothNavLink>
-              <SmoothNavLink onClick={() => onNavigate('crm')}>CRM</SmoothNavLink>
-            </nav>
-          </div>
-        </div>
-      </header>
+      {/* Removed duplicate sticky header; global layout bar shows breadcrumb/nav */}
+      {/* Avoid extra breadcrumb or secondary nav here */}
 
       {/* Solutions Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

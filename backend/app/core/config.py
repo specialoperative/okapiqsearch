@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     CENSUS_API_KEY: Optional[str] = os.getenv("CENSUS_API_KEY")
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     SERPAPI_KEY: Optional[str] = os.getenv("SERPAPI_KEY")
+    FIRECRAWL_API_KEY: Optional[str] = os.getenv("FIRECRAWL_API_KEY")
+    APIFY_TOKEN: Optional[str] = os.getenv("APIFY_TOKEN")
+    CRIMEOMETER_API_KEY: Optional[str] = os.getenv("CRIMEOMETER_API_KEY")
+    # LeanGenius
+    LEANGENIUS_API_KEY: Optional[str] = os.getenv("LEANGENIUS_API_KEY")
+    LEANGENIUS_BASE_URL: str = os.getenv("LEANGENIUS_BASE_URL", "https://api.leangenius.ai")
     
     # Stripe
     STRIPE_SECRET_KEY: Optional[str] = os.getenv("STRIPE_SECRET_KEY")

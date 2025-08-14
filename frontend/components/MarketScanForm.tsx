@@ -123,7 +123,7 @@ export function MarketScanForm({ onScan, isScanning }: MarketScanFormProps) {
           ) : (
             <>
               <MagnifyingGlassIcon className="h-4 w-4 mr-2" />
-              Scan Market
+            Search
             </>
           )}
         </button>

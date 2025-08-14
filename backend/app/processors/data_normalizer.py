@@ -226,8 +226,12 @@ class DataNormalizer:
             normalized_businesses = self._merge_duplicates(normalized_businesses)
         
         # Sort by data quality and lead score
+        def _qual_val(q):
+            v = getattr(q, 'value', q)
+            rank = {'poor': 0, 'low': 1, 'medium': 2, 'high': 3}
+            return rank.get(v, 0)
         normalized_businesses.sort(
-            key=lambda b: (b.overall_quality.value, b.metrics.lead_score or 0),
+            key=lambda b: (_qual_val(b.overall_quality), b.metrics.lead_score or 0),
             reverse=True
         )
         
@@ -268,11 +272,13 @@ class DataNormalizer:
             business_id = self._generate_business_id(raw_data)
             
             # Extract and normalize basic info
-            name = self._normalize_business_name(raw_data.get('name', raw_data.get('business_name', '')))
+            raw_name = raw_data.get('name', raw_data.get('business_name', '')) or ''
+            name = self._normalize_business_name(raw_name)
             if not name:
                 return None
                 
-            category = self._normalize_category(raw_data.get('industry', raw_data.get('category', '')))
+            category_input = raw_data.get('industry', raw_data.get('category', '')) or ''
+            category = self._normalize_category(category_input)
             
             # Normalize address
             address = self._normalize_address(raw_data)
@@ -327,8 +333,8 @@ class DataNormalizer:
         phone = raw_data.get('phone', '')
         
         # Clean and normalize for hashing
-        clean_name = re.sub(r'[^\w\s]', '', name.lower().strip())
-        clean_address = re.sub(r'[^\w\s]', '', address.lower().strip())
+        clean_name = re.sub(r'[^\w\s]', '', (name or '').lower().strip())
+        clean_address = re.sub(r'[^\w\s]', '', (address or '').lower().strip())
         clean_phone = re.sub(r'[^\d]', '', phone)
         
         hash_input = f"{clean_name}|{clean_address}|{clean_phone}"
@@ -356,7 +362,7 @@ class DataNormalizer:
         if not category_input:
             return BusinessCategory.OTHER
             
-        category_lower = category_input.lower()
+        category_lower = (category_input or '').lower()
         
         # Category mapping
         category_mapping = {
@@ -569,6 +575,20 @@ class DataNormalizer:
         # Simple address parsing (could be enhanced with geocoding services)
         address_clean = address.strip()
         
+        # Try to capture street line as the first comma-separated segment
+        try:
+            first_seg = address_clean.split(',')[0].strip()
+            # Looks like a street if it begins with a house number or contains a common street suffix
+            if re.search(r'^\d{1,6}\s+.+', first_seg) or re.search(r'\b(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln|Way|Place|Pl|Parkway|Pkwy|Highway|Hwy)\b', first_seg, re.I):
+                num_match = re.match(r'^(\d{1,6})\s+(.*)$', first_seg)
+                if num_match:
+                    parts['street_number'] = num_match.group(1)
+                    parts['street_name'] = num_match.group(2).strip()
+                else:
+                    parts['street_name'] = first_seg
+        except Exception:
+            pass
+
         # Extract ZIP code
         zip_match = re.search(r'\b(\d{5}(?:-\d{4})?)\b', address_clean)
         if zip_match:
@@ -587,7 +607,7 @@ class DataNormalizer:
                 
         return parts
     
-    def _validate_phone(self, phone: str) -> tuple[Optional[str], bool]:
+    def _validate_phone(self, phone: str) -> "tuple[Optional[str], bool]":
         """Validate and format phone number"""
         
         try:
@@ -707,14 +727,14 @@ class DataNormalizer:
         """Generate a key for identifying similar businesses"""
         
         # Normalize name for comparison
-        name_clean = re.sub(r'[^\w]', '', business.name.lower())
+        name_clean = re.sub(r'[^\w]', '', (business.name or '').lower())
         
         # Use name + approximate location
         location_key = ""
-        if business.address.zip_code:
+        if getattr(business.address, 'zip_code', None):
             location_key = business.address.zip_code[:5]
-        elif business.address.city:
-            location_key = re.sub(r'[^\w]', '', business.address.city.lower())[:10]
+        elif getattr(business.address, 'city', None):
+            location_key = re.sub(r'[^\w]', '', (business.address.city or '').lower())[:10]
             
         return f"{name_clean}_{location_key}"
     
@@ -732,7 +752,11 @@ class DataNormalizer:
         existing.data_sources.extend(new.data_sources)
         
         # Update fields with higher quality data
-        if new.overall_quality.value > existing.overall_quality.value:
+        def _qual_val(q):
+            v = getattr(q, 'value', q)
+            rank = {'poor': 0, 'low': 1, 'medium': 2, 'high': 3}
+            return rank.get(v, 0)
+        if _qual_val(new.overall_quality) > _qual_val(existing.overall_quality):
             # New record has better quality, update key fields
             if new.contact.phone and not existing.contact.phone:
                 existing.contact.phone = new.contact.phone
@@ -755,7 +779,7 @@ class DataNormalizer:
                 existing.owner = new.owner
                 
         # Update overall quality to the better one
-        if new.overall_quality.value > existing.overall_quality.value:
+        if _qual_val(new.overall_quality) > _qual_val(existing.overall_quality):
             existing.overall_quality = new.overall_quality
             
         existing.last_updated = datetime.now()

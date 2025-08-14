@@ -18,6 +18,12 @@ from datetime import datetime
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+from dataclasses import is_dataclass, asdict
+from datetime import date
+from decimal import Decimal
+import numpy as np
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
@@ -87,7 +93,7 @@ class OpportunityRequest(BaseModel):
 
 # Main Intelligence Endpoints
 
-@router.post("/scan", response_model=Dict[str, Any])
+@router.post("/scan")
 async def comprehensive_market_scan(
     request: MarketScanRequest,
     background_tasks: BackgroundTasks,
@@ -170,7 +176,36 @@ async def comprehensive_market_scan(
             "errors": response.errors or []
         }
         
-        return api_response
+        # Ensure JSON-safe types recursively
+        def _json_safe(obj):
+            try:
+                if obj is None:
+                    return None
+                if isinstance(obj, (str, int, float, bool)):
+                    return obj
+                if isinstance(obj, (np.integer,)):
+                    return int(obj)
+                if isinstance(obj, (np.floating,)):
+                    return float(obj)
+                if isinstance(obj, (np.ndarray,)):
+                    return obj.tolist()
+                if isinstance(obj, (date, datetime)):
+                    return obj.isoformat()
+                if isinstance(obj, Decimal):
+                    return float(obj)
+                if is_dataclass(obj):
+                    return _json_safe(asdict(obj))
+                if isinstance(obj, dict):
+                    return {str(k): _json_safe(v) for k, v in obj.items()}
+                if isinstance(obj, (list, tuple, set)):
+                    return [_json_safe(v) for v in obj]
+            except Exception:
+                pass
+            # Fallback to string representation for unknown objects
+            return str(obj)
+
+        safe = _json_safe(api_response)
+        return JSONResponse(content=jsonable_encoder(safe))
         
     except Exception as e:
         logger.error(f"Market scan failed: {e}")

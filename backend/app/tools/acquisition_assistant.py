@@ -557,7 +557,7 @@ class AcquisitionAssistant:
                 base_probability += 0.1
         
         # Quality factor
-        if business.overall_quality.value == 'high':
+        if getattr(business.overall_quality, 'value', business.overall_quality) == 'high':
             base_probability += 0.1
         
         return min(0.9, base_probability)  # Cap at 90%
@@ -587,7 +587,7 @@ class AcquisitionAssistant:
         if not business.contact.email_valid and not business.contact.phone_valid:
             deal.concerns.append("Limited contact information")
         
-        if business.overall_quality.value == 'poor':
+        if getattr(business.overall_quality, 'value', business.overall_quality) == 'poor':
             deal.concerns.append("Insufficient business data")
         
         # Set integration complexity

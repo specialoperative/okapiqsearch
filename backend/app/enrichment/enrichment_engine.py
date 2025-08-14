@@ -104,6 +104,7 @@ class EnrichmentEngine:
         self.sos_client = SOSRegistryClient()
         self.nlp_processor = NLPProcessor()
         self.web_researcher = WebResearcher()
+        self.leangenius = LeanGeniusClient()
         
         # Cache for expensive operations
         self.cache = {}
@@ -186,6 +187,11 @@ class EnrichmentEngine:
                 nlp_result = await self._enrich_with_nlp(business)
                 if nlp_result.success:
                     enrichment_results['nlp'] = nlp_result.enriched_data
+            # LeanGenius enrichment for contact and website intelligence
+            if 'leangenius' in enrichment_types:
+                lg_result = await self._enrich_with_leangenius(business)
+                if lg_result.success:
+                    enrichment_results['leangenius'] = lg_result.enriched_data
             # AI web research (fresh web data via SERP + LLM) - temporarily disabled for stability
             # if 'web_ai' in enrichment_types:
             #     web_result = await self._enrich_with_web_ai(business)
@@ -206,6 +212,30 @@ class EnrichmentEngine:
         except Exception as e:
             self.logger.error(f"Error enriching business {business.business_id}: {e}")
             return business
+
+    async def _enrich_with_leangenius(self, business: NormalizedBusiness) -> EnrichmentResult:
+        """Use LeanGenius to fetch contact/website intelligence."""
+        start_time = datetime.now()
+        try:
+            result = await self.leangenius.lookup_business(business.name, business.contact.website)
+            if not result:
+                return EnrichmentResult(success=False, enriched_data={}, confidence_score=0.0, sources_used=[], processing_time=0.0, errors=["No LeanGenius data"]) 
+            data = {
+                'contact_enrichment': {
+                    'emails_found': result.get('emails', []),
+                    'phones_found': result.get('phones', []),
+                    'social_profiles': result.get('social', [])
+                }
+            }
+            return EnrichmentResult(
+                success=True,
+                enriched_data=data,
+                confidence_score=0.7,
+                sources_used=['LeanGenius'],
+                processing_time=(datetime.now() - start_time).total_seconds()
+            )
+        except Exception as e:
+            return EnrichmentResult(success=False, enriched_data={}, confidence_score=0.0, sources_used=['LeanGenius'], processing_time=(datetime.now() - start_time).total_seconds(), errors=[str(e)])
     
     async def _enrich_with_census(self, business: NormalizedBusiness) -> EnrichmentResult:
         """Enrich business with Census demographic data"""
@@ -491,6 +521,16 @@ class EnrichmentEngine:
                 confidence_score=0.75,
                 sources_used=['Market_Intelligence_Engine'],
                 processing_time=processing_time
+            )
+        except Exception as e:
+            processing_time = (datetime.now() - start_time).total_seconds()
+            return EnrichmentResult(
+                success=False,
+                enriched_data={},
+                confidence_score=0.0,
+                sources_used=['Market_Intelligence_Engine'],
+                processing_time=processing_time,
+                errors=[str(e)]
             )
     
     # async def _enrich_with_web_ai(self, business: NormalizedBusiness) -> EnrichmentResult:
@@ -923,6 +963,25 @@ class WebResearcher:
         except Exception:
             return {'key_points':[], 'owner_candidates':[], 'emails_found':[], 'phones_found':[], 'risk_signals':[]}
 
+
+# Simple LeanGenius HTTP client
+class LeanGeniusClient:
+    async def lookup_business(self, name: Optional[str], website: Optional[str]) -> Optional[Dict[str, Any]]:
+        from ..core.config import settings
+        api_key = settings.LEANGENIUS_API_KEY
+        base = settings.LEANGENIUS_BASE_URL
+        if not api_key:
+            return None
+        payload = {"name": name, "website": website}
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"{base}/v1/enrich", json=payload, headers=headers) as resp:
+                    if resp.status != 200:
+                        return None
+                    return await resp.json()
+        except Exception:
+            return None
 
 # Export main classes
 __all__ = [

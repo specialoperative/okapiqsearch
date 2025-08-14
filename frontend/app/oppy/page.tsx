@@ -17,27 +17,9 @@ export default function OppyPage() {
 
   return (
     <div className="min-h-screen bg-[#fcfbfa]">
-      <nav className="border-b border-okapi-brown-200 bg-white/90 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold text-okapi-brown-900">
-              Okapiq
-            </Link>
-            <div className="flex items-center gap-3">
-              <Link href="/solutions">
-                <Button variant="outline" className="border-okapi-brown-300 text-okapi-brown-700 hover:bg-okapi-brown-50">
-                  Solutions
-                </Button>
-              </Link>
-              <Link href="/contact">
-                <Button className="bg-okapi-brown-600 hover:bg-okapi-brown-700 text-white">Book a Demo</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Rely on global layout header; keep solid background */}
 
-      <header className="bg-gradient-to-br from-okapi-brown-50 to-white py-12 border-b border-okapi-brown-200">
+      <header className="bg-[#fcfbfa] py-12 border-b border-okapi-brown-200">
         <div className="max-w-5xl mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-extrabold text-okapi-brown-900">Oppy – Opportunity Finder</h1>
           <p className="text-okapi-brown-700 mt-4 text-lg max-w-3xl">

@@ -5,6 +5,7 @@ import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
 import dynamic from 'next/dynamic';
 
 const InteractiveMap = dynamic(() => import('./interactive-map'), { ssr: false });
+import { US_CRIME_HEAT_POINTS, US_CENTER } from '@/components/../lib/crimeHeat';
 
 const navLinks = [
   { name: "How it Works", page: "how-it-works" },
@@ -28,6 +29,12 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined);
   const [tam, setTam] = useState<string>("$2.4B");
   const [region, setRegion] = useState<string>("San Francisco Bay Area");
+  const [heatPoints, setHeatPoints] = useState<{ position:[number,number]; intensity?: number }[]>([]);
+  const cityOptions = [
+    'United States',
+    'New York City','Los Angeles','Chicago','Houston','Phoenix','Philadelphia','San Antonio','San Diego','Dallas','San Jose','Austin','Jacksonville','Fort Worth','Columbus','Charlotte','Indianapolis','San Francisco','Seattle','Denver','Oklahoma City','Nashville','Sacramento','El Paso','Washington D.C.','Boston','Las Vegas'
+  ];
+  const [selectedCity, setSelectedCity] = useState<string>('United States');
 
   const navigate = (page: string) => {
     const url = new URL(window.location.href);
@@ -89,6 +96,39 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
     }
   }
 
+  // Fetch US-wide Crimeometer aggregate on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365`);
+        const data = res.ok ? await res.json() : null;
+        const livePts = Array.isArray(data?.points) ? data.points : [];
+        setHeatPoints(livePts.map((p:any)=>({ position: p.position as [number,number], intensity: p.intensity })));
+      } catch {
+        setHeatPoints([]);
+      }
+    })();
+  }, []);
+
+  // Optional: add city overlay via Crimeometer when selector changes
+  useEffect(() => {
+    const key = (selectedCity || 'United States').toLowerCase();
+    if (key === 'united states') return;
+    const apiKey = key; // backend now geocodes arbitrary city
+    (async () => {
+      try {
+        if (!apiKey) return;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics/crime-heat?provider=crimeometer&city=${encodeURIComponent(apiKey)}&limit=6000&days_back=365`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data?.points) && data.points.length > 0) {
+          const overlay = data.points.map((p:any)=>({ position: p.position as [number,number], intensity: p.intensity }));
+          setHeatPoints(prev => [...prev, ...overlay]);
+        }
+      } catch {}
+    })();
+  }, [selectedCity]);
+
   // Geolocate on mount to preset map center
   useEffect(() => {
     if (typeof window === 'undefined' || mapCenter) return;
@@ -109,38 +149,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
   return (
     <div className="min-h-screen bg-[#fcfbfa] text-gray-900">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-100">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-md bg-emerald-600" />
-            <span className="font-bold text-[18px] tracking-tight">Okapiq</span>
-            </div>
-          <nav className="hidden md:flex gap-8 text-[14px] font-medium text-gray-700">
-            <a href="/market-intelligence" className="hover:text-black transition-colors" aria-label="Dashboard">
-              Dashboard
-            </a>
-            {navLinks.map((link) => (
-              <button
-                key={link.name}
-                onClick={() => navigate(link.page)}
-                className="hover:text-black transition-colors"
-                aria-label={link.name}
-              >
-                {link.name}
-              </button>
-            ))}
-            </nav>
-          <div className="flex items-center gap-2">
-            <button className="hidden md:inline-flex items-center px-4 py-2 rounded-lg font-semibold text-gray-800 border border-gray-200 hover:bg-gray-50 transition" onClick={() => navigate('signin')}>
-              Sign In
-            </button>
-            <button className="md:hidden p-2 rounded-lg hover:bg-gray-100" aria-label="Open menu">
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Header removed: Global nav and breadcrumb from app/layout.tsx handle top navigation */}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-12 flex flex-col lg:flex-row gap-12 items-start">
@@ -189,22 +198,22 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             <button
               type="submit"
               className="inline-flex items-center justify-center gap-2 bg-[#402f23] text-white px-7 py-3 rounded-xl whitespace-nowrap font-semibold shadow-lg hover:bg-[#594733] transition-colors disabled:opacity-60"
-              aria-label="Scan Market"
+              aria-label="Search"
               disabled={isScanning}
             >
-              <span>{isScanning ? 'Scanning…' : 'Scan Market'}</span>
+              <span>{isScanning ? 'Scanning…' : 'Search'}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </form>
 
           {/* Secondary actions */}
           <div className="flex flex-col sm:flex-row gap-3 mb-5">
-            <button className="flex items-center justify-center gap-2 flex-1 border border-gray-300 px-5 py-2.5 rounded-full font-semibold text-gray-800 bg-white hover:bg-gray-50 transition" onClick={() => navigate('market-scanner')}>
+            <a href="/oppy" className="flex items-center justify-center gap-2 flex-1 border border-gray-300 px-5 py-2.5 rounded-full font-semibold text-gray-800 bg-white hover:bg-gray-50 transition">
               Try Free Demo
-            </button>
-            <button className="flex items-center justify-center gap-2 flex-1 border border-gray-300 px-5 py-2.5 rounded-full font-semibold text-gray-800 bg-white hover:bg-gray-50 transition" onClick={() => navigate('crm')}>
+            </a>
+            <a href="/crm" className="flex items-center justify-center gap-2 flex-1 border border-gray-300 px-5 py-2.5 rounded-full font-semibold text-gray-800 bg-white hover:bg-gray-50 transition">
               Open CRM
-            </button>
+            </a>
           </div>
 
           {/* Checklist */}
@@ -241,9 +250,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               ))}
                   </div>
 
-            <button className="mt-5 w-full bg-[#402f23] text-white font-semibold py-3 rounded-xl shadow hover:bg-[#594733] transition" onClick={() => navigate('market-scanner')}>
+            <a href="/oppy" className="mt-5 w-full inline-flex items-center justify-center bg-[#402f23] text-white font-semibold py-3 rounded-xl shadow hover:bg-[#594733] transition">
               Open Full Intelligence Suite
-            </button>
+            </a>
           </div>
         </aside>
       </main>
@@ -252,7 +261,29 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
       <section className="max-w-7xl mx-auto px-6 -mt-6">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
           <div className="lg:col-span-3 rounded-2xl overflow-hidden shadow border border-gray-100">
-            <InteractiveMap heightClassName="h-[420px]" businesses={mapBusinesses} center={computedCenter} />
+            <div className="flex items-center justify-between px-4 pt-4">
+              <label className="text-sm text-gray-600">Crime heat city:</label>
+              <select
+                value={selectedCity}
+                onChange={(e)=>setSelectedCity(e.target.value)}
+                className="border rounded-md text-sm px-2 py-1"
+                aria-label="Crime heat city selector"
+              >
+                {cityOptions.map(c=> (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <InteractiveMap 
+              heightClassName="h-[420px]"
+              businesses={mapBusinesses}
+              center={computedCenter ?? US_CENTER}
+              zoom={4}
+              fitToBusinesses={false}
+              showHeat={true}
+              crimeCity={selectedCity === 'United States' ? 'us' : selectedCity}
+              crimeDaysBack={365}
+            />
           </div>
           <div className="lg:col-span-2 rounded-2xl overflow-hidden shadow border border-gray-100 bg-white">
             {/* Embedded slim scanner controls */}
@@ -275,12 +306,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 >
                   {isScanning ? 'Scanning…' : 'Scan & Update Map'}
                 </button>
-                <button
-                  onClick={() => navigate('market-scanner')}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                >
+                <a href="/oppy" className="px-4 py-2 border rounded-lg hover:bg-gray-50">
                   Open Full Scanner
-                </button>
+                </a>
               </div>
               <p className="text-xs text-gray-500">Map updates with latest scan results.</p>
                 </div>

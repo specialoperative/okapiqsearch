@@ -336,10 +336,10 @@ const EnhancedMarketScanner: React.FC<EnhancedMarketScannerProps> = ({ onNavigat
                       Scanning...
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <Target className="h-4 w-4" />
-                      Scan Market
-                    </div>
+                        Search
+                      </div>
                   )}
                   </button>
                   
