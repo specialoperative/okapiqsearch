@@ -8,7 +8,7 @@ import pandas as pd
 import json
 from datetime import datetime
 
-from app.routers import market, leads, auth, analytics, intelligence
+from app.routers import market, leads, auth, analytics, intelligence, knowledge
 from app.core.config import settings
 from app.core.database import engine, Base
 
@@ -38,6 +38,7 @@ app.include_router(market.router, prefix="/market", tags=["Market Intelligence"]
 app.include_router(leads.router, prefix="/leads", tags=["Lead Management"])
 app.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 app.include_router(intelligence.router, prefix="/intelligence", tags=["Intelligence"])
+app.include_router(knowledge.router, prefix="/knowledge", tags=["Knowledge"])
 
 @app.get("/")
 async def root():

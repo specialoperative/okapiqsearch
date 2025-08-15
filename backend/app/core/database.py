@@ -115,6 +115,17 @@ class MarketIntelligence(Base):
     processed_at = Column(DateTime(timezone=True), server_default=func.now())
     expires_at = Column(DateTime)
 
+class Document(Base):
+    __tablename__ = "documents"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    source_type = Column(String)  # web, github_readme, wikipedia
+    source_id = Column(String)    # repo path, wiki title, etc.
+    title = Column(String)
+    url = Column(String)
+    content = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 # Database dependency
 def get_db():
     db = SessionLocal()
