@@ -44,6 +44,7 @@ export default function RootLayout({
               <a href="/crm" className="hover:text-black">CRM</a>
               <a href="/case-studies" className="hover:text-black">Case Studies</a>
               <a href="/pricing" className="hover:text-black">Pricing</a>
+              <a href="/buy-box" className="hover:text-black">Buy Box</a>
               <span className="inline-block"><LoginMenu /></span>
             </nav>
           </div>
