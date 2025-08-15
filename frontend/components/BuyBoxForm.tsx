@@ -25,6 +25,7 @@ interface BuyBox {
   seller_financing: boolean;
   sba_guidelines: boolean;
   contact_emails: string[];
+  contact_phones: string[];
   contact_notes: string;
 }
 
@@ -72,11 +73,13 @@ export default function BuyBoxForm({ buyBox, onSave, onCancel }: BuyBoxFormProps
     seller_financing: true,
     sba_guidelines: false,
     contact_emails: [],
+    contact_phones: [],
     contact_notes: "",
     ...buyBox
   });
 
   const [contactEmailInput, setContactEmailInput] = React.useState("");
+  const [contactPhoneInput, setContactPhoneInput] = React.useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +114,23 @@ export default function BuyBoxForm({ buyBox, onSave, onCancel }: BuyBoxFormProps
     setFormData(prev => ({
       ...prev,
       contact_emails: prev.contact_emails.filter(e => e !== email)
+    }));
+  };
+
+  const addContactPhone = () => {
+    if (contactPhoneInput.trim() && !formData.contact_phones.includes(contactPhoneInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        contact_phones: [...prev.contact_phones, contactPhoneInput.trim()]
+      }));
+      setContactPhoneInput("");
+    }
+  };
+
+  const removeContactPhone = (phone: string) => {
+    setFormData(prev => ({
+      ...prev,
+      contact_phones: prev.contact_phones.filter(p => p !== phone)
     }));
   };
 
@@ -404,6 +424,44 @@ export default function BuyBoxForm({ buyBox, onSave, onCancel }: BuyBoxFormProps
                 <button
                   type="button"
                   onClick={() => removeContactEmail(email)}
+                  className="ml-1 text-red-600 hover:text-red-800"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Contact Phone Numbers */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Contact Phone Numbers
+          </label>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="tel"
+              value={contactPhoneInput}
+              onChange={(e) => setContactPhoneInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addContactPhone())}
+              className="flex-1 border rounded-md px-3 py-2"
+              placeholder="Add contact phone number"
+            />
+            <button
+              type="button"
+              onClick={addContactPhone}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              Add
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formData.contact_phones.map(phone => (
+              <span key={phone} className="inline-flex items-center px-2 py-1 bg-gray-100 rounded text-sm">
+                {phone}
+                <button
+                  type="button"
+                  onClick={() => removeContactPhone(phone)}
                   className="ml-1 text-red-600 hover:text-red-800"
                 >
                   ×

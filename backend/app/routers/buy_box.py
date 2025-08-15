@@ -32,6 +32,7 @@ class BuyBoxCreate(BaseModel):
     seller_financing: bool = True
     sba_guidelines: bool = False
     contact_emails: Optional[List[str]] = None
+    contact_phones: Optional[List[str]] = None
     contact_notes: Optional[str] = None
 
 class BuyBoxUpdate(BaseModel):
@@ -55,6 +56,7 @@ class BuyBoxUpdate(BaseModel):
     seller_financing: Optional[bool] = None
     sba_guidelines: Optional[bool] = None
     contact_emails: Optional[List[str]] = None
+    contact_phones: Optional[List[str]] = None
     contact_notes: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -81,6 +83,7 @@ class BuyBoxResponse(BaseModel):
     seller_financing: bool
     sba_guidelines: bool
     contact_emails: Optional[List[str]]
+    contact_phones: Optional[List[str]]
     contact_notes: Optional[str]
     is_active: bool
     created_at: str
@@ -118,6 +121,7 @@ async def create_buy_box(
         seller_financing=buy_box.seller_financing,
         sba_guidelines=buy_box.sba_guidelines,
         contact_emails=buy_box.contact_emails,
+        contact_phones=buy_box.contact_phones,
         contact_notes=buy_box.contact_notes
     )
     
@@ -221,6 +225,7 @@ async def create_avila_peak_template(
         seller_financing=True,
         sba_guidelines=True,
         contact_emails=["juanmendoza@avilapeakpartners.com", "marcomendoza@avilapeakpartners.com"],
+        contact_phones=["+1 (555) 123-4567", "+1 (555) 987-6543"],
         contact_notes="Entrepreneurial investment firm seeking high-quality U.S.-based businesses with strong fundamentals and growth potential."
     )
     

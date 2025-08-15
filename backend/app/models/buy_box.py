@@ -42,6 +42,7 @@ class BuyBox(Base):
     
     # Contact information
     contact_emails = Column(JSON, nullable=True)  # ["juanmendoza@avilapeakpartners.com"]
+    contact_phones = Column(JSON, nullable=True)  # ["+1 (415) 234-3984"]
     contact_notes = Column(Text, nullable=True)
     
     # Status and metadata

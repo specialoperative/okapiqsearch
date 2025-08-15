@@ -32,6 +32,7 @@ interface BuyBox {
   seller_financing: boolean;
   sba_guidelines: boolean;
   contact_emails: string[];
+  contact_phones: string[];
   contact_notes: string;
   is_active: boolean;
   created_at: string;
@@ -275,6 +276,13 @@ export default function BuyBoxPage() {
                   <div className="font-medium text-gray-700">Contact Emails</div>
                   <div className="text-gray-600">
                     {buyBox.contact_emails.length > 0 ? buyBox.contact_emails.join(', ') : 'None'}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="font-medium text-gray-700">Contact Phones</div>
+                  <div className="text-gray-600">
+                    {buyBox.contact_phones?.length > 0 ? buyBox.contact_phones.join(', ') : 'None'}
                   </div>
                 </div>
 
