@@ -38,7 +38,7 @@ app.include_router(market.router, prefix="/market", tags=["Market Intelligence"]
 app.include_router(leads.router, prefix="/leads", tags=["Lead Management"])
 app.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 app.include_router(intelligence.router, prefix="/intelligence", tags=["Intelligence"])
-app.include_router(knowledge.router, prefix="/knowledge", tags=["Knowledge"])
+app.include_router(knowledge.router, tags=["Knowledge"])
 
 @app.get("/")
 async def root():

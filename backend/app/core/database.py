@@ -115,16 +115,30 @@ class MarketIntelligence(Base):
     processed_at = Column(DateTime(timezone=True), server_default=func.now())
     expires_at = Column(DateTime)
 
-class Document(Base):
-    __tablename__ = "documents"
-    
+# Lightweight knowledge base for RAG
+class KnowledgeDocument(Base):
+    __tablename__ = "knowledge_documents"
+
     id = Column(Integer, primary_key=True, index=True)
-    source_type = Column(String)  # web, github_readme, wikipedia
-    source_id = Column(String)    # repo path, wiki title, etc.
     title = Column(String)
-    url = Column(String)
-    content = Column(Text)
+    source_url = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    chunks = relationship("KnowledgeChunk", back_populates="document", cascade="all, delete-orphan")
+
+
+class KnowledgeChunk(Base):
+    __tablename__ = "knowledge_chunks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("knowledge_documents.id"))
+    content = Column(Text)
+    embedding = Column(Text)  # JSON array (list[float]) for simplicity; small corpora only
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    document = relationship("KnowledgeDocument", back_populates="chunks")
 
 # Database dependency
 def get_db():

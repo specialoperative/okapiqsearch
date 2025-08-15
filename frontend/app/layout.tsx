@@ -4,7 +4,7 @@ import './globals.css'
 import dynamic from 'next/dynamic'
 const BreadcrumbPath = dynamic(() => import('../components/BreadcrumbPath'), { ssr: false });
 const AuthProvider = dynamic(() => import('../components/auth/AuthProvider').then(m=>m.default), { ssr: false });
-const LoginMenu = dynamic(() => import('../components/auth/LoginMenu'), { ssr: false });
+const LoginMenu = dynamic(() => import('../components/auth/LoginMenu').then(m=>m.default), { ssr: false });
 
 const inter = Inter({ subsets: ['latin'] })
 
