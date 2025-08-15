@@ -310,10 +310,10 @@ export default function BuyBoxPage() {
         </div>
       )}
 
-      {/* Crime Map Section */}
-      <div className="mt-12 mb-8">
+      {/* Market Safety Intelligence - Always visible at bottom of all Buy Box pages */}
+      <div className="mt-12 mb-8 border-t pt-12">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Market Safety Intelligence</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Market Safety Intelligence</h2>
           <p className="text-gray-600">
             Evaluate crime trends in target acquisition areas using real-time Crimeometer data.
             Crime patterns can affect business valuations, customer foot traffic, and operational costs.
