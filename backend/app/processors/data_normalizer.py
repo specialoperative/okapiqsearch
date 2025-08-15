@@ -38,6 +38,15 @@ class DataSource(Enum):
     IRS_RECORDS = "irs_records"
     CENSUS = "census"
     MANUAL_INPUT = "manual_input"
+    # Apify actor sources
+    APIFY_GMAPS = "apify_gmaps"
+    APIFY_GMAPS_EMAIL = "apify_gmaps_email"
+    APIFY_GMAPS_WEBSITES = "apify_gmaps_websites"
+    APIFY_WEBSITE_CRAWLER = "apify_website_crawler"
+    APIFY_APOLLO = "apify_apollo"
+    APIFY_LINKEDIN_JOBS = "apify_linkedin_jobs"
+    # Other crawler
+    FIRECRAWL = "firecrawl"
 
 
 class BusinessCategory(Enum):
@@ -659,7 +668,16 @@ class DataNormalizer:
             DataSource.SECRETARY_OF_STATE: 0.9,
             DataSource.IRS_RECORDS: 0.95,
             DataSource.CENSUS: 0.9,
-            DataSource.MANUAL_INPUT: 0.5
+            DataSource.MANUAL_INPUT: 0.5,
+            # Apify actors
+            DataSource.APIFY_GMAPS: 0.8,
+            DataSource.APIFY_GMAPS_EMAIL: 0.7,
+            DataSource.APIFY_GMAPS_WEBSITES: 0.75,
+            DataSource.APIFY_WEBSITE_CRAWLER: 0.6,
+            DataSource.APIFY_APOLLO: 0.7,
+            DataSource.APIFY_LINKEDIN_JOBS: 0.6,
+            # Firecrawl
+            DataSource.FIRECRAWL: 0.65
         }
         
         score = source_scores.get(source, 0.5)

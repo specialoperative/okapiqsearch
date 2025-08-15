@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import dynamic from 'next/dynamic'
 const BreadcrumbPath = dynamic(() => import('../components/BreadcrumbPath'), { ssr: false });
+const AuthProvider = dynamic(() => import('../components/auth/AuthProvider').then(m=>m.default), { ssr: false });
+const LoginMenu = dynamic(() => import('../components/auth/LoginMenu'), { ssr: false });
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,6 +29,7 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className + ' bg-[#fcfbfa]'}>
+        <AuthProvider>
         <div className="border-b bg-white/70 backdrop-blur">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between text-sm">
             <div className="flex items-center gap-3">
@@ -41,10 +44,12 @@ export default function RootLayout({
               <a href="/crm" className="hover:text-black">CRM</a>
               <a href="/case-studies" className="hover:text-black">Case Studies</a>
               <a href="/pricing" className="hover:text-black">Pricing</a>
+              <span className="inline-block"><LoginMenu /></span>
             </nav>
           </div>
         </div>
         {children}
+        </AuthProvider>
       </body>
     </html>
   )
