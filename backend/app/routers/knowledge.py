@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional, List
 import httpx
 from bs4 import BeautifulSoup
+import os
+from urllib.parse import quote as urlquote
 
 from app.core.database import get_db, Document
 from app.core.config import settings
@@ -51,7 +53,7 @@ async def ingest_github_readme(repo: str = Query(..., description="owner/repo"),
 @router.post("/ingest/wikipedia")
 async def ingest_wikipedia(title: str, db: Session = Depends(get_db)):
     try:
-        api = "https://en.wikipedia.org/api/rest_v1/page/plain/" + httpx.utils.quote(title)
+        api = "https://en.wikipedia.org/api/rest_v1/page/plain/" + urlquote(title)
         async with httpx.AsyncClient(timeout=20) as client:
             r = await client.get(api)
             r.raise_for_status()
