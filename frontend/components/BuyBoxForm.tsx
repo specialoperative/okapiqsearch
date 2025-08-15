@@ -2,7 +2,6 @@
 
 import React from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import InteractiveMap from "./interactive-map";
 
 interface BuyBox {
   id?: number;
@@ -502,71 +501,6 @@ export default function BuyBoxForm({ buyBox, onSave, onCancel }: BuyBoxFormProps
           </button>
         </div>
       </form>
-
-      {/* Market Safety Intelligence - Always visible at bottom of Buy Box form */}
-      <div className="mt-12 border-t pt-12">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Market Safety Intelligence</h2>
-          <p className="text-gray-600">
-            Evaluate crime trends in target acquisition areas using real-time Crimeometer data.
-            Crime patterns can affect business valuations, customer foot traffic, and operational costs.
-          </p>
-        </div>
-        
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="p-4 bg-gray-50 border-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">Live Crime Data</h3>
-                <p className="text-sm text-gray-600">Powered by Crimeometer API • Updated in real-time</p>
-              </div>
-              <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-500 rounded"></div>
-                  <span>High Crime</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-                  <span>Moderate Crime</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-500 rounded"></div>
-                  <span>Low Crime</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="h-96">
-            <InteractiveMap
-              searchTerm="United States"
-              businesses={[]}
-              onBusinessSelect={() => {}}
-              crimeCity="us"
-              crimeDaysBack={365}
-              showHeat={true}
-              className="h-full w-full"
-            />
-          </div>
-          
-          <div className="p-4 bg-gray-50 border-t">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <div className="font-medium text-gray-700">Data Coverage</div>
-                <div className="text-gray-600">800+ US cities with real-time updates</div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-700">Time Range</div>
-                <div className="text-gray-600">Last 365 days of crime incidents</div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-700">Use Cases</div>
-                <div className="text-gray-600">Due diligence, risk assessment, valuation impact</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
