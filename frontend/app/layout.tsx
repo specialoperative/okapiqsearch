@@ -1,10 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import dynamic from 'next/dynamic'
-const BreadcrumbPath = dynamic(() => import('../components/BreadcrumbPath'), { ssr: false });
-const AuthProvider = dynamic(() => import('../components/auth/AuthProvider').then(m=>m.default), { ssr: false });
-const LoginMenu = dynamic(() => import('../components/auth/LoginMenu').then(m=>m.default), { ssr: false });
+import BreadcrumbPath from '../components/BreadcrumbPath'
+import AuthProvider from '../components/auth/AuthProvider'
+import LoginMenu from '../components/auth/LoginMenu'
 
 const inter = Inter({ subsets: ['latin'] })
 
