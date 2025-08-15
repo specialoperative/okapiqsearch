@@ -4,25 +4,14 @@ import React from "react";
 
 export default function KnowledgePage() {
   const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, "");
-  const [q, setQ] = React.useState("");
-  const [results, setResults] = React.useState<any[]>([]);
   const [ingestUrl, setIngestUrl] = React.useState("");
   const [ingestRepo, setIngestRepo] = React.useState("");
   const [ingestWiki, setIngestWiki] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-
-  const search = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!q) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${apiBase}/knowledge/search?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      setResults(data);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [chat, setChat] = React.useState<{role:'user'|'assistant', content:string}[]>([
+    { role: 'assistant', content: 'Hi! I can ingest websites, GitHub READMEs, and Wikipedia pages, then answer questions using that context. Add some sources below, then ask away.' }
+  ]);
+  const [input, setInput] = React.useState("");
+  const [sending, setSending] = React.useState(false);
 
   const doIngest = async (type: 'web'|'github'|'wiki') => {
     let url = '';
@@ -37,27 +26,27 @@ export default function KnowledgePage() {
       return;
     }
     await fetch(url, options);
-    await search();
   };
-
-  const [chat, setChat] = React.useState<{role:'user'|'assistant', content:string}[]>([
-    { role: 'assistant', content: 'Hi! I can search your ingested knowledge and answer questions. Paste a URL/README/Wikipedia title to ingest, then ask me anything.' }
-  ]);
-  const [input, setInput] = React.useState("");
-
+  
   const send = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!input.trim()) return;
-    const next = [...chat, { role: 'user', content: input.trim() }];
+    const content = input.trim();
+    if (!content) return;
+    const next = [...chat, { role: 'user', content }];
     setChat(next);
     setInput("");
-    const res = await fetch(`${apiBase}/knowledge/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: next })
-    });
-    const data = await res.json();
-    setChat([...next, { role: 'assistant', content: data.reply }]);
+    setSending(true);
+    try {
+      const res = await fetch(`${apiBase}/knowledge/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: next })
+      });
+      const data = await res.json();
+      setChat([...next, { role: 'assistant', content: data.reply }]);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -93,7 +82,7 @@ export default function KnowledgePage() {
 
       <form onSubmit={send} className="flex gap-2">
         <input value={input} onChange={(e)=>setInput(e.target.value)} placeholder="Ask anything about your knowledge..." className="flex-1 border rounded px-3 py-2" />
-        <button className="bg-black text-white rounded px-4">Send</button>
+        <button disabled={sending} className="bg-black text-white rounded px-4">{sending? 'Thinking…' : 'Send'}</button>
       </form>
     </main>
   );
