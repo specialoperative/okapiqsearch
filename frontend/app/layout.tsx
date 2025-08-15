@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import BreadcrumbPath from '../components/BreadcrumbPath'
-import AuthProvider from '../components/auth/AuthProvider'
-import LoginMenu from '../components/auth/LoginMenu'
+import dynamic from 'next/dynamic'
+const BreadcrumbPath = dynamic(() => import('../components/BreadcrumbPath'), { ssr: false });
+const AuthProvider = dynamic(() => import('../components/auth/AuthProvider').then(m=>m.default), { ssr: false });
+const LoginMenu = dynamic(() => import('../components/auth/LoginMenu'), { ssr: false });
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -43,7 +44,6 @@ export default function RootLayout({
               <a href="/crm" className="hover:text-black">CRM</a>
               <a href="/case-studies" className="hover:text-black">Case Studies</a>
               <a href="/pricing" className="hover:text-black">Pricing</a>
-              <a href="/knowledge" className="hover:text-black">Knowledge</a>
               <span className="inline-block"><LoginMenu /></span>
             </nav>
           </div>
