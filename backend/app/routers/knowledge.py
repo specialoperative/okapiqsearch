@@ -4,6 +4,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.core.database import get_db, Document
+from app.core.config import settings
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -80,5 +81,40 @@ def get_doc(doc_id: int, db: Session = Depends(get_db)):
     if not d:
         raise HTTPException(status_code=404, detail="Not found")
     return {"id": d.id, "title": d.title, "url": d.url, "content": d.content, "source_type": d.source_type}
+
+@router.post("/chat")
+async def chat(messages: list[dict], db: Session = Depends(get_db)):
+    """
+    Lightweight RAG chat over stored documents; falls back to plain LLM if no matches.
+    messages: [{role:'user'|'assistant'|'system', content:'...'}]
+    """
+    query = " ".join([m.get("content","") for m in messages if m.get("role") == "user"][ -1:])
+    context = ""
+    if query:
+        q_like = f"%{query.lower()}%"
+        hits = db.query(Document).filter((Document.title.ilike(q_like)) | (Document.content.ilike(q_like))).limit(5).all()
+        for h in hits:
+            snippet = h.content[:1200] if h.content else ""
+            context += f"\n\n[Source: {h.title}]\n{snippet}"
+    prompt = (
+        "You are Okapiq Knowledge Assistant. Use the following context if relevant.\n"
+        f"Context: {context}\n\n"
+        "Answer clearly and cite titles in brackets when you reference sources."
+    )
+    user_latest = [m for m in messages if m.get("role") == "user"][-1]["content"] if messages else ""
+
+    # Prefer OpenAI if key is present; otherwise produce a local concise response
+    if settings.OPENAI_API_KEY:
+        try:
+            import openai
+            openai.api_key = settings.OPENAI_API_KEY
+            chat_messages = [{"role":"system","content":prompt}] + messages
+            resp = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo", messages=chat_messages, temperature=0.2, max_tokens=500)
+            return {"reply": resp.choices[0].message["content"]}
+        except Exception as e:
+            # Fallback
+            return {"reply": f"Context summary: {context[:600]}\n\nAnswer: {user_latest}"}
+    else:
+        return {"reply": f"(Dev mode) No OPENAI_API_KEY set.\n\nContext considered:{context[:600]}\n\nQuestion: {user_latest}\n\nProvide a concise answer based on the above context."}
 
 

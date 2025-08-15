@@ -40,9 +40,29 @@ export default function KnowledgePage() {
     await search();
   };
 
+  const [chat, setChat] = React.useState<{role:'user'|'assistant', content:string}[]>([
+    { role: 'assistant', content: 'Hi! I can search your ingested knowledge and answer questions. Paste a URL/README/Wikipedia title to ingest, then ask me anything.' }
+  ]);
+  const [input, setInput] = React.useState("");
+
+  const send = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!input.trim()) return;
+    const next = [...chat, { role: 'user', content: input.trim() }];
+    setChat(next);
+    setInput("");
+    const res = await fetch(`${apiBase}/knowledge/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: next })
+    });
+    const data = await res.json();
+    setChat([...next, { role: 'assistant', content: data.reply }]);
+  };
+
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-      <h1 className="text-2xl font-bold">Knowledge Hub</h1>
+    <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      <h1 className="text-2xl font-bold">Knowledge Chat</h1>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="border rounded p-4">
@@ -62,20 +82,19 @@ export default function KnowledgePage() {
         </div>
       </section>
 
-      <form onSubmit={search} className="flex gap-2">
-        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Search knowledge..." className="flex-1 border rounded px-3 py-2" />
-        <button className="bg-black text-white rounded px-4">Search</button>
-      </form>
-
-      <section className="space-y-3">
-        {loading ? <div>Searching...</div> : results.map((r) => (
-          <a key={r.id} href={`/knowledge/${r.id}`} className="block p-3 border rounded hover:bg-gray-50">
-            <div className="font-semibold">{r.title}</div>
-            <div className="text-xs text-gray-500 truncate">{r.url}</div>
-            <div className="text-sm text-gray-700 line-clamp-2">{r.snippet}</div>
-          </a>
+      <div className="border rounded p-4 bg-white h-[60vh] overflow-y-auto space-y-3">
+        {chat.map((m, i) => (
+          <div key={i} className={m.role==='assistant'? 'text-gray-900' : 'text-gray-800'}>
+            <div className="text-xs uppercase tracking-wide text-gray-400">{m.role}</div>
+            <div className="whitespace-pre-wrap">{m.content}</div>
+          </div>
         ))}
-      </section>
+      </div>
+
+      <form onSubmit={send} className="flex gap-2">
+        <input value={input} onChange={(e)=>setInput(e.target.value)} placeholder="Ask anything about your knowledge..." className="flex-1 border rounded px-3 py-2" />
+        <button className="bg-black text-white rounded px-4">Send</button>
+      </form>
     </main>
   );
 }
