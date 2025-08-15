@@ -36,6 +36,7 @@ class User(Base):
     # Relationships
     market_scans = relationship("MarketScan", back_populates="user")
     leads = relationship("Lead", back_populates="user")
+    buy_boxes = relationship("BuyBox", back_populates="user")
 
 class MarketScan(Base):
     __tablename__ = "market_scans"

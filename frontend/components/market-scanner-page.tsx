@@ -770,7 +770,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                 </label>
               </div>
             </div>
- 
+
             <div className="bg-white rounded-2xl shadow border border-okapi-brown-200 p-6">
               <h3 className="text-xl font-bold text-okapi-brown-900 mb-4">Advanced Filters</h3>
               <div className="space-y-3 text-sm text-okapi-brown-800">
@@ -786,17 +786,6 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                   <input type="checkbox" checked={advFilters.linkedinSignals} onChange={e=>setAdvFilters(f=>({...f,linkedinSignals:e.target.checked}))} />
                   <span>LinkedIn deal signals</span>
                 </label>
-              </div>
-              <div className="mt-6 border-t pt-4">
-                <h4 className="text-sm font-semibold text-okapi-brown-900 mb-2">Buy Box (Avila Peak Partners)</h4>
-                <ul className="text-xs text-okapi-brown-700 space-y-1">
-                  <li>Industries: Business/Consumer Services, Distribution</li>
-                  <li>Location: U.S. only</li>
-                  <li>Financial: $300k+ EBITDA, $1.5M+ revenue, 3x+ EBITDA, $1.5M–$7M price</li>
-                  <li>Ops: 2nd-level mgmt or remote-ownable; overseas outsourcing appealing</li>
-                  <li>Preferred: Recurring revenue; low customer concentration</li>
-                  <li>Deals: Asset or stock; seller financing per SBA</li>
-                </ul>
               </div>
             </div>
           </div>

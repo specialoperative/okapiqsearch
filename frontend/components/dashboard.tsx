@@ -208,6 +208,42 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </StaggeredReveal>
         </div>
 
+        {/* Buy Box Summary */}
+        <SmoothReveal delay={0.15}>
+          <div className="mb-8">
+            <OrigamiCard pattern="tiger" className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-okapi-brown-900">Active Buy Boxes</h3>
+                <a href="/buy-box" className="text-sm text-emerald-700 hover:text-emerald-900">
+                  Manage →
+                </a>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-white rounded-lg border border-okapi-brown-200">
+                  <Target className="w-6 h-6 text-orange-600 mx-auto mb-2" />
+                  <p className="text-sm text-okapi-brown-600">Total Buy Boxes</p>
+                  <p className="text-2xl font-bold text-okapi-brown-900">3</p>
+                </div>
+                <div className="text-center p-4 bg-white rounded-lg border border-okapi-brown-200">
+                  <Building2 className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                  <p className="text-sm text-okapi-brown-600">Matched Deals</p>
+                  <p className="text-2xl font-bold text-okapi-brown-900">24</p>
+                </div>
+                <div className="text-center p-4 bg-white rounded-lg border border-okapi-brown-200">
+                  <DollarSign className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                  <p className="text-sm text-okapi-brown-600">Avg Deal Size</p>
+                  <p className="text-2xl font-bold text-okapi-brown-900">$3.2M</p>
+                </div>
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Latest:</strong> Avila Peak Partners criteria matched 4 new businesses in Business Services
+                </p>
+              </div>
+            </OrigamiCard>
+          </div>
+        </SmoothReveal>
+
         {/* Quick Actions & Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <SmoothReveal delay={0.2}>
@@ -222,13 +258,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <Users className="w-5 h-5 mr-3" />
                   View CRM
               </PallyButton></a>
+              <a href="/buy-box" className="w-full inline-flex"><PallyButton variant="secondary" className="w-full justify-start">
+                  <Target className="w-5 h-5 mr-3" />
+                  Manage Buy Box
+              </PallyButton></a>
               <a href="/solutions" className="w-full inline-flex"><PallyButton variant="secondary" className="w-full justify-start">
                   <BarChart3 className="w-5 h-5 mr-3" />
                   Market Analysis
-              </PallyButton></a>
-              <a href="/solutions" className="w-full inline-flex"><PallyButton variant="secondary" className="w-full justify-start">
-                  <Target className="w-5 h-5 mr-3" />
-                  Case Studies
               </PallyButton></a>
               </div>
             </OrigamiCard>
