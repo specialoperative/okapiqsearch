@@ -271,10 +271,9 @@ async def comprehensive_market_scan(
         sample_businesses = []  # Initialize here to avoid scope issues
         
         # Skip API calls for performance - use sample data only
-        if False:  # Disabled API calls
-            from ..crawlers.smart_crawler_hub import SmartCrawlerHub
-            # Initialize crawler hub for real data aggregation
-            crawler_hub = SmartCrawlerHub()
+        try:
+            # Skip API calls for performance - force exception to use sample data
+            raise Exception("Using sample data for fast response")
             
             # Use Google SERP API for business discovery
             if not request.industry or request.industry.lower() in ['all', 'all industries', '']:
