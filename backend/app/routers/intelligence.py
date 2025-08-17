@@ -656,7 +656,7 @@ async def comprehensive_market_scan(
                     'industry': biz.get('industry', request.industry or 'hvac'),
                     'address': {
                         'formatted_address': formatted_addr,
-                        'line1': formatted_addr.split(',')[0].strip() if formatted_addr else None,
+                        'line1': (formatted_addr.split(',')[0].strip() if isinstance(formatted_addr, str) and formatted_addr else None),
                         'city': city_p or request.location,
                         'state': state_p or 'CA',
                         'zip_code': zip_p,
