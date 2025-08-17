@@ -404,6 +404,55 @@ async def comprehensive_market_scan(
                     seen.add(key)
                     deduped.append(b)
                 sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
+
+                # Optional enrichment: Google Places (website + authoritative address)
+                try:
+                    from ..core.config import settings as _settings
+                    api_key = getattr(_settings, 'GOOGLE_MAPS_API_KEY', None)
+                    if api_key:
+                        import aiohttp as _aiohttp
+                        async def _enrich_one(session, biz: Dict[str, Any]):
+                            try:
+                                needs_site = not biz.get('website')
+                                addr_txt = biz.get('address') or ''
+                                needs_addr = not (isinstance(addr_txt, str) and any(ch.isdigit() for ch in addr_txt[:12]))
+                                if not (needs_site or needs_addr):
+                                    return
+                                query = f"{biz.get('name','')} {request.location}"
+                                find_url = (
+                                    "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
+                                    f"?input={query.replace(' ', '%20')}&inputtype=textquery&fields=place_id,formatted_address&key={api_key}"
+                                )
+                                async with session.get(find_url) as resp:
+                                    find_data = await resp.json()
+                                candidates = (find_data or {}).get('candidates') or []
+                                if not candidates:
+                                    return
+                                pid = candidates[0].get('place_id')
+                                if needs_addr and isinstance(candidates[0].get('formatted_address'), str):
+                                    biz['address'] = candidates[0]['formatted_address']
+                                if pid and needs_site:
+                                    details_url = (
+                                        "https://maps.googleapis.com/maps/api/place/details/json"
+                                        f"?place_id={pid}&fields=website,url,formatted_address,formatted_phone_number&key={api_key}"
+                                    )
+                                    async with session.get(details_url) as dresp:
+                                        ddata = await dresp.json()
+                                    result = (ddata or {}).get('result') or {}
+                                    if not biz.get('website') and isinstance(result.get('website'), str):
+                                        biz['website'] = result['website']
+                                    if isinstance(result.get('formatted_address'), str) and (needs_addr):
+                                        biz['address'] = result['formatted_address']
+                                    if not biz.get('phone') and isinstance(result.get('formatted_phone_number'), str):
+                                        biz['phone'] = result['formatted_phone_number']
+                            except Exception:
+                                return
+                        async with _aiohttp.ClientSession() as _session:
+                            tasks = [_enrich_one(_session, b) for b in sample_businesses]
+                            await asyncio.gather(*tasks, return_exceptions=True)
+                except Exception:
+                    # Enrichment is best-effort; ignore failures
+                    pass
             else:
                 raise Exception("Insufficient real data, using samples")
                 
@@ -648,14 +697,6 @@ async def comprehensive_market_scan(
                 # Quick normalization without heavy processing
                 formatted_addr = biz.get('address', '')
                 city_p, state_p, zip_p = _parse_city_state_zip(formatted_addr)
-                # Derive a safe street line only if it looks like a real street (has number + type)
-                import re as _re
-                _line1 = None
-                if isinstance(formatted_addr, str) and formatted_addr:
-                    _first = formatted_addr.split(',')[0].strip()
-                    if _re.search(r"\b\d{1,6}\s+", _first) and _re.search(r"(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|way|pl|place)\b", _first, _re.I):
-                        _line1 = _first
-
                 normalized = {
                     'business_id': f"raw_{i}_{hash(str(biz))}",
                     'name': biz.get('name', 'Unknown Business'),
@@ -663,7 +704,7 @@ async def comprehensive_market_scan(
                     'industry': biz.get('industry', request.industry or 'hvac'),
                     'address': {
                         'formatted_address': formatted_addr,
-                        'line1': _line1,
+                        'line1': formatted_addr.split(',')[0].strip() if formatted_addr else None,
                         'city': city_p or request.location,
                         'state': state_p or 'CA',
                         'zip_code': zip_p,

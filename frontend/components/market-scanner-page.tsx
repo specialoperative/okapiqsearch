@@ -32,7 +32,6 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
   const resultsRef = useRef<HTMLDivElement | null>(null);
   const [resolvedAddresses, setResolvedAddresses] = useState<Record<string | number, string>>({});
-  const [resolvedWebsites, setResolvedWebsites] = useState<Record<string | number, string>>({});
   // High-crime city coordinates for lightweight heat overlay
   const computeCrimeHeatPoints = () => US_CRIME_HEAT_POINTS;
   // Removed API Online badge per request
@@ -305,8 +304,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     return '';
   };
 
-  // Opportunistically resolve missing street lines and websites via Google Places,
-  // falling back to Nominatim for addresses when needed (batched concurrency)
+  // Opportunistically resolve missing street lines via Nominatim using business name + city
   useEffect(() => {
     const businesses: any[] = Array.isArray(scanResults?.businesses) ? scanResults.businesses : [];
     if (!businesses.length) return;
@@ -340,83 +338,52 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       if (g && g.maps?.places) {
         try { svc = new g.maps.places.PlacesService(document.createElement('div')); } catch {}
       }
-      const normalizeUrl = (u?: string) => {
-        if (!u || typeof u !== 'string') return '';
-        const s = u.trim();
-        if (!s) return '';
-        return /^https?:\/\//i.test(s) ? s : `https://${s}`;
-      };
-      const resolveOne = async (b: any) => {
+      for (const b of businesses) {
         const id = b?.business_id || b?.id || b?.name;
-        if (!id) return;
+        if (!id || resolvedAddresses[id]) continue;
         const street = getStreetAddress(b);
         const looksMissing = !(typeof street === 'string' && /\d/.test(street));
+        if (!looksMissing && !svc) continue; // already adequate
         const cityLine = getCityStateZip(b) || searchTerm;
         const q = [b?.name, cityLine].filter(Boolean).join(' ');
         let resolvedLine: string | null = null;
-        let resolvedSite: string | null = null;
         // First try Google Places (authoritative)
         if (svc) {
           try {
-            // Try Find Place for better website yield
-            const place: any = await new Promise<any>((resolve) => {
-              try {
-                (svc as any).findPlaceFromQuery({ query: q, fields: ['place_id','formatted_address','name'] }, (res: any[], status: string) => {
-                  resolve(Array.isArray(res) && res.length > 0 ? res[0] : null);
-                });
-              } catch {
-                (svc as any).textSearch({ query: q }, (results: any[], status: string) => {
-                  resolve(Array.isArray(results) && results.length > 0 ? results[0] : null);
-                });
-              }
-            });
-            if (place && place.place_id) {
-              await new Promise<void>((resolve) => {
-                svc.getDetails({ placeId: place.place_id, fields: ['formatted_address','website','url'] }, (det: any, _status: string) => {
-                  try {
-                    const fa = det?.formatted_address as string | undefined;
-                    if (!resolvedLine && typeof fa === 'string' && fa.includes(',')) {
+            await new Promise<void>((resolve) => {
+              svc.textSearch({ query: q }, (results: any[], status: string) => {
+                try {
+                  if (Array.isArray(results) && results.length > 0) {
+                    const r0 = results[0];
+                    const fa = r0?.formatted_address as string | undefined;
+                    if (typeof fa === 'string' && fa.includes(',')) {
                       const first = fa.split(',')[0]?.trim();
                       if (first && /\d/.test(first)) resolvedLine = first;
                     }
-                    const ws = det?.website as string | undefined;
-                    const googleUrl = det?.url as string | undefined;
-                    const chosen = ws || googleUrl;
-                    if (chosen && typeof chosen === 'string' && chosen.length > 3) {
-                      resolvedSite = normalizeUrl(chosen);
-                    }
-                  } finally { resolve(); }
-                });
+                  }
+                } finally { resolve(); }
               });
-            } else if (place?.formatted_address && !resolvedLine) {
-              const fa = place.formatted_address as string;
-              const first = fa.split(',')[0]?.trim();
-              if (first && /\d/.test(first)) resolvedLine = first;
-            }
+            });
           } catch {}
         }
         // Fallback to Nominatim if Places not available
         if (!resolvedLine) {
           try {
             const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&accept-language=en-US&q=${encodeURIComponent(q)}&email=okapiq-support@okapiq.com`;
-          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          const data = await resp.json();
-          if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
-            const addr = data[0].address as any;
-            const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
-            if (line1 && /\d/.test(line1)) {
+            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await resp.json();
+            if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
+              const addr = data[0].address as any;
+              const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
+              if (line1 && /\d/.test(line1)) {
                 resolvedLine = line1;
+              }
             }
-          }
-        } catch {}
+          } catch {}
         }
         if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
-        if (resolvedSite) setResolvedWebsites(prev => ({ ...prev, [id]: resolvedSite! }));
-      };
-      const maxParallel = 8;
-      for (let i = 0; i < businesses.length; i += maxParallel) {
-        const batch = businesses.slice(i, i + maxParallel);
-        await Promise.all(batch.map(resolveOne));
+        // Nominatim usage policy: throttle requests
+        await new Promise(res => setTimeout(res, 600));
       }
     };
     run();
@@ -744,19 +711,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Business Type</span><span className="text-okapi-brown-900 font-medium">{business?.business_type || business?.category || 'N/A'}</span></div>
-                            <div className="flex justify-between truncate">
-                              <span className="text-okapi-brown-500">Website</span>
-                              {(() => {
-                                const id = business?.business_id || business?.id || business?.name;
-                                const siteRaw = resolvedWebsites[id] || business?.contact?.website || business?.website;
-                                if (!siteRaw) return (<span className="text-okapi-brown-900 font-medium">N/A</span>);
-                                const s = String(siteRaw).trim();
-                                const url = s.startsWith('http') ? s : `https://${s}`;
-                                return (
-                                  <a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={url} target="_blank" rel="noopener noreferrer">{s}</a>
-                                );
-                              })()}
-                            </div>
+                            <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(business?.contact?.website || business?.website) ? (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={(business?.contact?.website || business?.website).startsWith('http') ? (business?.contact?.website || business?.website) : `https://${business?.contact?.website || business?.website}`} target="_blank" rel="noopener noreferrer">{business?.contact?.website || business?.website}</a>) : (<span className="text-okapi-brown-900 font-medium">N/A</span>)}</div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Gmap rating</span><span className="text-okapi-brown-900 font-medium">{business?.gmap_rating ?? business?.metrics?.rating ?? 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Min Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.min_revenue ? `$${(business.computed.min_revenue).toLocaleString()}` : 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Max Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.max_revenue ? `$${(business.computed.max_revenue).toLocaleString()}` : 'N/A'}</span></div>
@@ -772,14 +727,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                           <div className="flex items-center justify-between pt-3 border-t border-okapi-brown-100">
                             <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskColor(business?.analysis?.succession_risk?.risk_score ?? business.succession_risk_score)}`}>{getRiskLevel(business?.analysis?.succession_risk?.risk_score ?? business.succession_risk_score)}</span>
                             <div className="flex items-center gap-3">
-                              {(() => {
-                                const id = business?.business_id || business?.id || business?.name;
-                                const siteRaw = resolvedWebsites[id] || business?.contact?.website || business?.website;
-                                if (!siteRaw) return null;
-                                const s = String(siteRaw).trim();
-                                const url = s.startsWith('http') ? s : `https://${s}`;
-                                return (<a href={url} target="_blank" rel="noopener noreferrer" className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"><ExternalLink className="w-4 h-4" /></a>);
-                              })()}
+                              {(business?.contact?.website || business.website) && (<a href={business?.contact?.website || business.website} target="_blank" rel="noopener noreferrer" className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"><ExternalLink className="w-4 h-4" /></a>)}
                               <button onClick={() => focusBusinessOnMap(business)} className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"><MapPin className="w-4 h-4" /></button>
                             </div>
                           </div>

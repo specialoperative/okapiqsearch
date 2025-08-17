@@ -1196,23 +1196,6 @@ class GoogleSerpAgent:
                 except Exception:
                     pass
 
-                # If missing website or street-like address, try SerpAPI place details enrichment
-                def _looks_like_street(addr_text: Optional[str]) -> bool:
-                    if not isinstance(addr_text, str):
-                        return False
-                    test = addr_text.lower()
-                    return any(sfx in test for sfx in [" st", " street", " ave", " avenue", " rd", " road", " blvd", " boulevard", " dr", " drive"]) and any(ch.isdigit() for ch in addr_text[:12])
-
-                if api_key and (not website or not _looks_like_street(address)) and data_id:
-                    try:
-                        enr_addr, enr_site = await self._serpapi_place_details(api_key, data_id, name)
-                        if enr_addr and not address:
-                            address = enr_addr
-                        if enr_site and not website:
-                            website = enr_site
-                    except Exception as _e:
-                        self.logger.debug(f"SerpAPI place enrichment failed for {name}: {_e}")
-
                 # Basic estimates similar to GoogleScapeAgent
                 base_revenue = 1000000
                 rating_factor = (float(rating) / 5.0) if rating else 0.6
@@ -1303,32 +1286,6 @@ class GoogleSerpAgent:
                 source="google_serp",
                 errors=[str(e)]
             )
-
-    async def _serpapi_place_details(self, api_key: str, data_id: Optional[str], name: str) -> tuple:
-        """Fetch address and website for a place via SerpAPI place details.
-        Returns (address, website) possibly None.
-        """
-        try:
-            params = {
-                "engine": "google_maps_place",
-                "data_id": data_id,
-                "api_key": api_key,
-            }
-            async with aiohttp.ClientSession() as session:
-                async with session.get("https://serpapi.com/search.json", params=params) as resp:
-                    txt = await resp.text()
-            try:
-                details = json.loads(txt)
-            except Exception:
-                self.logger.debug(f"Place details non-JSON: {txt[:180]}")
-                details = {}
-            pr = details.get("place_results") or details
-            addr = pr.get("address") or pr.get("formatted_address")
-            site = pr.get("website") or pr.get("link")
-            return addr, site
-        except Exception as e:
-            self.logger.debug(f"Place details error: {e}")
-            return None, None
 
     async def _geocode_location(self, location_text: str):
         if not location_text:
