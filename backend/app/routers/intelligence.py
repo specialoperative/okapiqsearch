@@ -405,48 +405,62 @@ async def comprehensive_market_scan(
                     deduped.append(b)
                 sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
 
-                # Optional enrichment: Google Places (website + authoritative address)
+                # Best-effort enrichment to ensure real street addresses and websites
                 try:
                     from ..core.config import settings as _settings
-                    api_key = getattr(_settings, 'GOOGLE_MAPS_API_KEY', None)
-                    if api_key:
+                    gkey = getattr(_settings, 'GOOGLE_MAPS_API_KEY', None)
+                    yelp_key = getattr(_settings, 'YELP_API_KEY', None)
+                    if gkey or yelp_key:
                         import aiohttp as _aiohttp
+
+                        def _looks_street(addr: Any) -> bool:
+                            if not isinstance(addr, str) or not addr:
+                                return False
+                            low = addr.lower()
+                            return (any(x in low for x in [' st', ' street', ' ave', ' avenue', ' rd', ' road', ' blvd', ' boulevard', ' dr', ' drive', ' ln', ' lane', ' way', ' ct', ' court']) and any(ch.isdigit() for ch in addr[:12]))
+
                         async def _enrich_one(session, biz: Dict[str, Any]):
                             try:
-                                needs_site = not biz.get('website')
-                                addr_txt = biz.get('address') or ''
-                                needs_addr = not (isinstance(addr_txt, str) and any(ch.isdigit() for ch in addr_txt[:12]))
+                                needs_site = not (isinstance(biz.get('website'), str) and len(biz['website']) > 4)
+                                needs_addr = not _looks_street(biz.get('address'))
                                 if not (needs_site or needs_addr):
                                     return
-                                query = f"{biz.get('name','')} {request.location}"
-                                find_url = (
-                                    "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
-                                    f"?input={query.replace(' ', '%20')}&inputtype=textquery&fields=place_id,formatted_address&key={api_key}"
-                                )
-                                async with session.get(find_url) as resp:
-                                    find_data = await resp.json()
-                                candidates = (find_data or {}).get('candidates') or []
-                                if not candidates:
-                                    return
-                                pid = candidates[0].get('place_id')
-                                if needs_addr and isinstance(candidates[0].get('formatted_address'), str):
-                                    biz['address'] = candidates[0]['formatted_address']
-                                if pid and needs_site:
-                                    details_url = (
-                                        "https://maps.googleapis.com/maps/api/place/details/json"
-                                        f"?place_id={pid}&fields=website,url,formatted_address,formatted_phone_number&key={api_key}"
-                                    )
-                                    async with session.get(details_url) as dresp:
-                                        ddata = await dresp.json()
-                                    result = (ddata or {}).get('result') or {}
-                                    if not biz.get('website') and isinstance(result.get('website'), str):
-                                        biz['website'] = result['website']
-                                    if isinstance(result.get('formatted_address'), str) and (needs_addr):
-                                        biz['address'] = result['formatted_address']
-                                    if not biz.get('phone') and isinstance(result.get('formatted_phone_number'), str):
-                                        biz['phone'] = result['formatted_phone_number']
+                                query = f"{biz.get('name','')} {request.location}".strip()
+                                # Prefer Google Places Text Search + Details
+                                if gkey:
+                                    ts_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+                                    params = {"query": query, "key": gkey}
+                                    async with session.get(ts_url, params=params) as resp:
+                                        ts_data = await resp.json()
+                                    candidates = (ts_data or {}).get('results') or []
+                                    if candidates:
+                                        pid = candidates[0].get('place_id')
+                                        if needs_addr and isinstance(candidates[0].get('formatted_address'), str):
+                                            biz['address'] = candidates[0]['formatted_address']
+                                        if pid and needs_site:
+                                            det_url = "https://maps.googleapis.com/maps/api/place/details/json"
+                                            det_params = {"place_id": pid, "fields": "website,formatted_address,formatted_phone_number", "key": gkey}
+                                            async with session.get(det_url, params=det_params) as dresp:
+                                                ddata = await dresp.json()
+                                            result = (ddata or {}).get('result') or {}
+                                            if not biz.get('website') and isinstance(result.get('website'), str):
+                                                biz['website'] = result['website']
+                                            if needs_addr and isinstance(result.get('formatted_address'), str):
+                                                biz['address'] = result['formatted_address']
+                                            if not biz.get('phone') and isinstance(result.get('formatted_phone_number'), str):
+                                                biz['phone'] = result['formatted_phone_number']
+                                # Yelp fallback for website URL
+                                if yelp_key and (not biz.get('website')):
+                                    yh = {"Authorization": f"Bearer {yelp_key}"}
+                                    yparams = {"term": biz.get('name',''), "location": request.location, "limit": 1}
+                                    async with session.get("https://api.yelp.com/v3/businesses/search", headers=yh, params=yparams) as yresp:
+                                        ydata = await yresp.json()
+                                    yitems = (ydata or {}).get('businesses') or []
+                                    if yitems and isinstance(yitems[0].get('url'), str):
+                                        biz['website'] = yitems[0]['url']
                             except Exception:
                                 return
+
                         async with _aiohttp.ClientSession() as _session:
                             tasks = [_enrich_one(_session, b) for b in sample_businesses]
                             await asyncio.gather(*tasks, return_exceptions=True)
