@@ -1178,13 +1178,17 @@ class GoogleSerpAgent:
                             items = val
                             break
             self.logger.info(f"SERP parsed items: {len(items)} for query='{search_q}' loc='{base_loc}'")
+            if items and len(items) > 0:
+                self.logger.info(f"First item fields: {list(items[0].keys())}")
             for item in items:
                 name = (item.get("title") or item.get("name") or "Business").strip()
                 rating = item.get("rating") or item.get("rating_number") or item.get("user_ratings") or 0
                 review_count = item.get("reviews") or item.get("reviews_count") or item.get("user_ratings_total") or 0
                 address = item.get("formatted_address") or item.get("address") or item.get("full_address") or item.get("snippet")
                 phone = item.get("international_phone_number") or item.get("phone_number") or item.get("phone")
-                website = item.get("website") or item.get("link") or item.get("local_result_link")
+                website = (item.get("website") or item.get("link") or item.get("local_result_link") or 
+                          item.get("domain") or item.get("url") or item.get("site") or 
+                          item.get("business_website") or item.get("homepage"))
                 data_id = item.get("data_id") or item.get("place_id") or item.get("data_id")
                 coords = None
                 try:
