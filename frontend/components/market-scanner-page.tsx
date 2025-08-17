@@ -340,7 +340,12 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       if (g && g.maps?.places) {
         try { svc = new g.maps.places.PlacesService(document.createElement('div')); } catch {}
       }
-      const normalizeUrl = (u?: string) => (typeof u === 'string' && u.trim()) ? (u.startsWith('http') ? u : `https://${u}`) : '';
+      const normalizeUrl = (u?: string) => {
+        if (!u || typeof u !== 'string') return '';
+        const s = u.trim();
+        if (!s) return '';
+        return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+      };
       const resolveOne = async (b: any) => {
         const id = b?.business_id || b?.id || b?.name;
         if (!id) return;
@@ -353,14 +358,21 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         // First try Google Places (authoritative)
         if (svc) {
           try {
+            // Try Find Place for better website yield
             const place: any = await new Promise<any>((resolve) => {
-              svc.textSearch({ query: q }, (results: any[], status: string) => {
-                resolve(Array.isArray(results) && results.length > 0 ? results[0] : null);
-              });
+              try {
+                (svc as any).findPlaceFromQuery({ query: q, fields: ['place_id','formatted_address','name'] }, (res: any[], status: string) => {
+                  resolve(Array.isArray(res) && res.length > 0 ? res[0] : null);
+                });
+              } catch {
+                (svc as any).textSearch({ query: q }, (results: any[], status: string) => {
+                  resolve(Array.isArray(results) && results.length > 0 ? results[0] : null);
+                });
+              }
             });
             if (place && place.place_id) {
               await new Promise<void>((resolve) => {
-                svc.getDetails({ placeId: place.place_id, fields: ['formatted_address','website'] }, (det: any, _status: string) => {
+                svc.getDetails({ placeId: place.place_id, fields: ['formatted_address','website','url'] }, (det: any, _status: string) => {
                   try {
                     const fa = det?.formatted_address as string | undefined;
                     if (!resolvedLine && typeof fa === 'string' && fa.includes(',')) {
@@ -368,8 +380,10 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                       if (first && /\d/.test(first)) resolvedLine = first;
                     }
                     const ws = det?.website as string | undefined;
-                    if (ws && typeof ws === 'string' && ws.length > 3) {
-                      resolvedSite = normalizeUrl(ws);
+                    const googleUrl = det?.url as string | undefined;
+                    const chosen = ws || googleUrl;
+                    if (chosen && typeof chosen === 'string' && chosen.length > 3) {
+                      resolvedSite = normalizeUrl(chosen);
                     }
                   } finally { resolve(); }
                 });
@@ -385,16 +399,16 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         if (!resolvedLine) {
           try {
             const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&accept-language=en-US&q=${encodeURIComponent(q)}&email=okapiq-support@okapiq.com`;
-            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            const data = await resp.json();
-            if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
-              const addr = data[0].address as any;
-              const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
-              if (line1 && /\d/.test(line1)) {
+          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const data = await resp.json();
+          if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
+            const addr = data[0].address as any;
+            const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
+            if (line1 && /\d/.test(line1)) {
                 resolvedLine = line1;
-              }
             }
-          } catch {}
+          }
+        } catch {}
         }
         if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
         if (resolvedSite) setResolvedWebsites(prev => ({ ...prev, [id]: resolvedSite! }));
