@@ -398,7 +398,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
         if (resolvedSite) setResolvedWebsites(prev => ({ ...prev, [id]: resolvedSite! }));
         // Usage policy: throttle requests
-        await new Promise(res => setTimeout(res, 600));
+        await new Promise(res => setTimeout(res, 250));
       }
     };
     run();
@@ -730,7 +730,13 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                               <span className="text-okapi-brown-500">Website</span>
                               {(() => {
                                 const id = business?.business_id || business?.id || business?.name;
-                                const siteRaw = resolvedWebsites[id] || business?.contact?.website || business?.website;
+                                // Choose in order: resolved site from Places, backend contact.website, backend website
+                                let siteRaw = resolvedWebsites[id] || business?.contact?.website || business?.website;
+                                // If siteRaw is like "www.example.com" add protocol. If it's a suspicious placeholder like "N/A" or city name, treat as missing.
+                                if (typeof siteRaw === 'string') {
+                                  const s = siteRaw.trim();
+                                  if (!s || s.toLowerCase() === 'n/a' || s.toLowerCase() === 'website' || /\s/.test(s)) siteRaw = '' as any;
+                                }
                                 if (!siteRaw) return (<span className="text-okapi-brown-900 font-medium">N/A</span>);
                                 const url = String(siteRaw).startsWith('http') ? String(siteRaw) : `https://${String(siteRaw)}`;
                                 return (

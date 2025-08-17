@@ -267,13 +267,14 @@ async def comprehensive_market_scan(
                 zip=zip_code
             )
         
-        # Generate businesses using sample data for fast response
+        # Generate more businesses using API aggregation and crawlers
+        # Use real API integration approach similar to Knowledge.com and smb.co
         sample_businesses = []  # Initialize here to avoid scope issues
         
-        # Skip API calls for performance - use sample data only
         try:
-            # Skip API calls for performance - force exception to use sample data
-            raise Exception("Using sample data for fast response")
+            from ..crawlers.smart_crawler_hub import SmartCrawlerHub
+            # Initialize crawler hub for real data aggregation
+            crawler_hub = SmartCrawlerHub()
             
             # Use Google SERP API for business discovery
             if not request.industry or request.industry.lower() in ['all', 'all industries', '']:
@@ -641,20 +642,20 @@ async def comprehensive_market_scan(
                 return city, state, zip_code
             except Exception:
                 return None, None, None
-        
-        # Website discovery is now disabled for performance - relies on SERP data only
-        # async def _find_business_website(business_name: str, city: str = None):
-        #     """Attempt to find a business website using Google search"""
-        #     # This was causing too many API calls and slow loading
 
-        # Fast processing for immediate results
-        for i, biz in enumerate(sample_businesses):  # Process sample businesses quickly
+        for i, biz in enumerate(sample_businesses):  # Process sample businesses
             try:
-                # Minimal processing for speed
+                # Quick normalization without heavy processing
                 formatted_addr = biz.get('address', '')
                 city_p, state_p, zip_p = _parse_city_state_zip(formatted_addr)
-                website = biz.get('website', '')
-                
+                # Derive a safe street line only if it looks like a real street (has number + type)
+                import re as _re
+                _line1 = None
+                if isinstance(formatted_addr, str) and formatted_addr:
+                    _first = formatted_addr.split(',')[0].strip()
+                    if _re.search(r"\b\d{1,6}\s+", _first) and _re.search(r"(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|way|pl|place)\b", _first, _re.I):
+                        _line1 = _first
+
                 normalized = {
                     'business_id': f"raw_{i}_{hash(str(biz))}",
                     'name': biz.get('name', 'Unknown Business'),
@@ -662,7 +663,7 @@ async def comprehensive_market_scan(
                     'industry': biz.get('industry', request.industry or 'hvac'),
                     'address': {
                         'formatted_address': formatted_addr,
-                        'line1': formatted_addr.split(',')[0].strip() if formatted_addr else None,
+                        'line1': _line1,
                         'city': city_p or request.location,
                         'state': state_p or 'CA',
                         'zip_code': zip_p,
@@ -671,28 +672,28 @@ async def comprehensive_market_scan(
                     'contact': {
                         'phone': biz.get('phone', ''),
                         'email': None,
-                        'website': website,
+                        'website': biz.get('website', ''),
                         'phone_valid': bool(biz.get('phone')),
                         'email_valid': False,
-                        'website_valid': bool(website)
+                        'website_valid': bool(biz.get('website'))
                     },
                     'metrics': {
                         'rating': biz.get('rating', 0.0),
                         'review_count': biz.get('reviews', 0),
-                        'estimated_revenue': 250000,  # Simple default
-                        'employee_count': 5,  # Simple default
-                        'years_in_business': 10,  # Simple default
-                        'lead_score': 75  # Simple default
+                        'estimated_revenue': max(biz.get('reviews', 0) * 1000, 50000),  # Estimate based on reviews
+                        'employee_count': max(int(biz.get('reviews', 0) / 50), 2),  # Rough estimate
+                        'years_in_business': min(max(int(biz.get('reviews', 0) / 20), 5), 30),  # Rough estimate
+                        'lead_score': min(int(biz.get('rating', 0) * 12.4), 62)  # Score based on rating
                     },
                     'computed': {
-                        'min_revenue': 150000,  # Simple default
-                        'max_revenue': 500000,  # Simple default  
+                        'min_revenue': int((biz.get('rating', 0) or 0) * 50000) if biz.get('rating') else None,
+                        'max_revenue': int(max(biz.get('reviews', 0) or 0, 1) * 10000) if biz.get('reviews') is not None else None,
                         'owner_age': 45,
                         'num_locations': 1,
                         'source': biz.get('source', 'google_serp')
                     },
                     'data_quality': 'medium',
-                    'data_sources': ['google_serp'],
+                    'data_sources': quick_sources,
                     'last_updated': datetime.now().isoformat(),
                     'tags': ['fallback_minimal']
                 }
@@ -742,7 +743,7 @@ async def comprehensive_market_scan(
             # Data quality
             "data_quality": {
                 "overall_score": 0.6,
-                "sources_used": ['google_serp'],
+                "sources_used": quick_sources,
                 "cache_hit_rate": 0.0
             },
             

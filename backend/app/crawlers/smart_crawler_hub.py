@@ -1184,25 +1184,7 @@ class GoogleSerpAgent:
                 review_count = item.get("reviews") or item.get("reviews_count") or item.get("user_ratings_total") or 0
                 address = item.get("formatted_address") or item.get("address") or item.get("full_address") or item.get("snippet")
                 phone = item.get("international_phone_number") or item.get("phone_number") or item.get("phone")
-                # Enhanced website extraction
-                website = (
-                    item.get("website") or 
-                    item.get("displayed_link") or 
-                    item.get("link") or 
-                    item.get("local_result_link") or
-                    item.get("domain") or
-                    item.get("source_link")
-                )
-                # Clean website URL
-                if website and isinstance(website, str):
-                    website = website.strip()
-                    # Remove common SERP artifacts
-                    if website.startswith('http'):
-                        pass  # Already has protocol
-                    elif website and '.' in website and not website.startswith('/'):
-                        website = f"https://{website}"
-                    else:
-                        website = None
+                website = item.get("website") or item.get("link") or item.get("local_result_link")
                 data_id = item.get("data_id") or item.get("place_id") or item.get("data_id")
                 coords = None
                 try:
