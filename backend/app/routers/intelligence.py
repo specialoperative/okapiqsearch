@@ -314,7 +314,7 @@ async def comprehensive_market_scan(
             # Aggregate data from multiple sources
             all_businesses = []
             from ..crawlers.smart_crawler_hub import CrawlerType, CrawlRequest
-            for query in search_queries[:3]:  # Limit to prevent timeout
+            for query in search_queries[:5]:  # Allow more queries to reach up to 50 businesses
                 try:
                     crawl_req = CrawlRequest(
                         crawler_type=CrawlerType.GOOGLE_SERP,
@@ -329,7 +329,7 @@ async def comprehensive_market_scan(
                     crawl_res = await crawler_hub._execute_crawl(crawl_req)
                     if crawl_res and crawl_res.success:
                         # Keep only entries with both name and a real-looking street address (number + street)
-                        for item in crawl_res.data[:20]:
+                        for item in crawl_res.data[:40]:
                             name_val = item.get('name')
                             addr_val = item.get('address')
                             if not isinstance(name_val, str):
@@ -403,7 +403,7 @@ async def comprehensive_market_scan(
                         continue
                     seen.add(key)
                     deduped.append(b)
-                sample_businesses = deduped[:min(request.max_businesses or 20, 25)]
+                sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
             else:
                 raise Exception("Insufficient real data, using samples")
                 
@@ -624,7 +624,7 @@ async def comprehensive_market_scan(
         businesses = []
         
         # Limit businesses based on request
-        max_businesses = min(request.max_businesses or 20, 25)  # Cap at 25 max
+        max_businesses = min(request.max_businesses or 20, 50)  # Cap at 50 max
         sample_businesses = sample_businesses[:max_businesses]
         
         def _parse_city_state_zip(addr_text: str):

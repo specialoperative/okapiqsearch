@@ -159,7 +159,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
           location: searchTerm,
           industry: selectedIndustry || '',
           radius_miles: 15,  // Reduced for speed
-          max_businesses: 20,  // Reduced for speed
+          max_businesses: 50,
           crawl_sources: Object.entries(sources).filter(([, v]) => v).map(([k]) => k) || ['google_serp'],
           // Minimal processing for speed
           enrichment_types: [],
