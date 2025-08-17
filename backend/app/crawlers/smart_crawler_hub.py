@@ -1186,7 +1186,6 @@ class GoogleSerpAgent:
                 phone = item.get("international_phone_number") or item.get("phone_number") or item.get("phone")
                 website = item.get("website") or item.get("link") or item.get("local_result_link")
                 data_id = item.get("data_id") or item.get("place_id") or item.get("data_id")
-                place_id = item.get("place_id")
                 coords = None
                 try:
                     gc = item.get("gps_coordinates") or {}
@@ -1217,12 +1216,61 @@ class GoogleSerpAgent:
                     "owner_age_estimate": 45,
                     "coordinates": coords,
                     "source": "Google SERP via SerpAPI",
-                    "place_data_id": data_id,
-                    "place_id": place_id
+                    "place_data_id": data_id
                 }
                 # add flat email key to align across sources
                 item_out["email"] = None
                 results.append(item_out)
+
+            # Enrich missing website/address using SerpAPI Google Maps Place details (by data_id)
+            try:
+                if api_key and results:
+                    targets: List[tuple] = []
+                    for idx, r in enumerate(results):
+                        pid = (r.get("place_data_id") or r.get("data_id") or None)
+                        if pid and (not r.get("website") or not r.get("address")):
+                            targets.append((idx, pid))
+                    # Limit enrichment to avoid rate limits
+                    if targets:
+                        async with aiohttp.ClientSession() as session:
+                            for idx, did in targets[:12]:
+                                try:
+                                    params_place = {
+                                        "engine": "google_maps_place",
+                                        "data_id": did,
+                                        "api_key": api_key,
+                                    }
+                                    async with session.get("https://serpapi.com/search.json", params=params_place) as dresp:
+                                        dtext = await dresp.text()
+                                    try:
+                                        djson = json.loads(dtext)
+                                    except Exception:
+                                        self.logger.warning(f"SERPAPI non-JSON place details for {did}: {dtext[:180]}")
+                                        djson = {}
+                                    # Pull key fields if present
+                                    det = djson.get("place_result") or djson
+                                    if isinstance(det, dict):
+                                        website_det = det.get("website")
+                                        addr_det = det.get("address") or det.get("formatted_address")
+                                        gps_det = det.get("gps_coordinates") or {}
+                                        phone_det = det.get("phone") or det.get("international_phone_number")
+                                        if website_det and not results[idx].get("website"):
+                                            results[idx]["website"] = website_det
+                                        if addr_det and not results[idx].get("address"):
+                                            results[idx]["address"] = addr_det
+                                        try:
+                                            lat_d = gps_det.get("latitude")
+                                            lng_d = gps_det.get("longitude")
+                                            if isinstance(lat_d, (int, float)) and isinstance(lng_d, (int, float)):
+                                                results[idx]["coordinates"] = [lat_d, lng_d]
+                                        except Exception:
+                                            pass
+                                        if phone_det and not results[idx].get("phone"):
+                                            results[idx]["phone"] = phone_det
+                                except Exception as de:
+                                    self.logger.debug(f"Place details enrichment failed for {did}: {de}")
+            except Exception as enrich_e:
+                self.logger.debug(f"SERP details enrichment skipped due to error: {enrich_e}")
 
             # If still empty, try Overpass (OpenStreetMap) as a final fallback
             if not results:

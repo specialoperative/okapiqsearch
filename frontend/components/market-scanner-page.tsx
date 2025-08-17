@@ -242,8 +242,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
 
   // Display the best-available street line. Prefer explicit street fields; otherwise parse from formatted text.
   const getStreetAddress = (b: any): string => {
-    const looksStreet = (s: string) => /\d{1,6}\s+.+/.test(s) || /(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)/i.test(s);
-    // 1) Common field variants – but only accept if it looks like a street
+    // 1) Common field variants
     const candidates = [
       b?.address?.line1,
       b?.address_line1,
@@ -258,24 +257,25 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       typeof b?.address === 'string' ? b.address : undefined
     ];
     for (const c of candidates) {
-      if (typeof c === 'string') {
-        const trimmed = c.trim();
-        if (trimmed && looksStreet(trimmed)) return trimmed;
-      }
+      if (typeof c === 'string' && c.trim()) return c.trim();
     }
     // 2) Parse from formatted strings
     const formatted = b?.address_formatted || b?.address?.formatted_address || b?.formatted_address || b?.location?.address || '';
     if (typeof formatted === 'string' && formatted.trim()) {
+      // If the first comma-separated segment looks like a street (contains a number), use it
       const first = formatted.split(',')[0]?.trim() || '';
-      if (looksStreet(first)) return first;
+      const looksLikeStreet = /\d{1,6}\s+.+/.test(first) || /(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)/i.test(first);
+      if (looksLikeStreet) return first;
+      // Otherwise, search anywhere in the string for a street-like pattern
       const m = formatted.match(/\d{1,6}\s+[^,]+?(?:\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln|Way|Place|Pl))\b/i);
       if (m && m[0]) return m[0].trim();
+      // If nothing matches, don't show city as a street line. Defer to resolver.
       return 'Resolving address…';
     }
-    // 3) Use any resolved address from client-side enrichment
+    // 3) Use any resolved address from client-side Nominatim enrichment
     const id = b?.business_id || b?.id || b?.name;
     if (id && resolvedAddresses[id]) return resolvedAddresses[id];
-    return 'Resolving address…';
+    return 'Address unavailable';
   };
 
   // Compose City, State Zip if available or parse from formatted
@@ -304,7 +304,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     return '';
   };
 
-  // Opportunistically resolve missing street lines and website via Google Places first, then Nominatim
+  // Opportunistically resolve missing street lines via Nominatim using business name + city
   useEffect(() => {
     const businesses: any[] = Array.isArray(scanResults?.businesses) ? scanResults.businesses : [];
     if (!businesses.length) return;
@@ -347,14 +347,11 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         const cityLine = getCityStateZip(b) || searchTerm;
         const q = [b?.name, cityLine].filter(Boolean).join(' ');
         let resolvedLine: string | null = null;
-        let resolvedSite: string | null = null;
         // First try Google Places (authoritative)
         if (svc) {
           try {
             await new Promise<void>((resolve) => {
-              const req: any = { query: q };
-              if (b?.place_id) req.query = undefined, req.placeId = b.place_id; // prefer place_id if present
-              svc.textSearch(req, (results: any[], status: string) => {
+              svc.textSearch({ query: q }, (results: any[], status: string) => {
                 try {
                   if (Array.isArray(results) && results.length > 0) {
                     const r0 = results[0];
@@ -362,20 +359,6 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                     if (typeof fa === 'string' && fa.includes(',')) {
                       const first = fa.split(',')[0]?.trim();
                       if (first && /\d/.test(first)) resolvedLine = first;
-                    }
-                    if (typeof r0?.website === 'string') resolvedSite = r0.website;
-                    // If website not present in textSearch payload, try a details lookup by place_id
-                    const pid = (b?.place_id || r0?.place_id);
-                    if (!resolvedSite && pid) {
-                      try {
-                        svc.getDetails({ placeId: pid, fields: ['website','formatted_address'] }, (dd: any, st: string) => {
-                          if (dd?.website) resolvedSite = dd.website;
-                          if (!resolvedLine && typeof dd?.formatted_address === 'string') {
-                            const first = dd.formatted_address.split(',')[0]?.trim();
-                            if (first && /\d/.test(first)) resolvedLine = first;
-                          }
-                        });
-                      } catch {}
                     }
                   }
                 } finally { resolve(); }
@@ -387,34 +370,18 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         if (!resolvedLine) {
           try {
             const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&accept-language=en-US&q=${encodeURIComponent(q)}&email=okapiq-support@okapiq.com`;
-          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          const data = await resp.json();
-          if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
-            const addr = data[0].address as any;
-            const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
-            if (line1 && /\d/.test(line1)) {
+            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await resp.json();
+            if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
+              const addr = data[0].address as any;
+              const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
+              if (line1 && /\d/.test(line1)) {
                 resolvedLine = line1;
+              }
             }
-          }
-        } catch {}
-        }
-        if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
-        if (resolvedSite && (!b?.contact?.website && !b?.website)) {
-          try {
-            // Patch scanResults in-place to surface the website in the card (optimistic UI)
-            setScanResults((prev:any)=>{
-              if (!prev?.businesses) return prev;
-              const copy = { ...prev, businesses: prev.businesses.map((x:any)=>{
-                if ((x?.business_id||x?.id||x?.name) === id) {
-                  const contact = { ...(x?.contact||{}), website: resolvedSite };
-                  return { ...x, contact, website: contact.website };
-                }
-                return x;
-              }) };
-              return copy;
-            });
           } catch {}
         }
+        if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
         // Nominatim usage policy: throttle requests
         await new Promise(res => setTimeout(res, 600));
       }
@@ -744,7 +711,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Business Type</span><span className="text-okapi-brown-900 font-medium">{business?.business_type || business?.category || 'N/A'}</span></div>
-                            <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(() => { const site = business?.contact?.website || business?.website; return site ? (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={/^https?:\/\//i.test(site) ? site : `https://${site}`} target="_blank" rel="noopener noreferrer">{site}</a>) : (<span className="text-okapi-brown-900 font-medium">N/A</span>); })()}</div>
+                            <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(() => { const s = business?.contact?.website || business?.website; if (!s) return (<span className="text-okapi-brown-900 font-medium">N/A</span>); const url = /^https?:\/\//i.test(s) ? s : `https://${s}`; return (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={url} target="_blank" rel="noopener noreferrer">{s}</a>); })()}</div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Gmap rating</span><span className="text-okapi-brown-900 font-medium">{business?.gmap_rating ?? business?.metrics?.rating ?? 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Min Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.min_revenue ? `$${(business.computed.min_revenue).toLocaleString()}` : 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Max Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.max_revenue ? `$${(business.computed.max_revenue).toLocaleString()}` : 'N/A'}</span></div>
