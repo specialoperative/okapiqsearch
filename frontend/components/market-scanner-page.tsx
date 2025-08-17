@@ -32,6 +32,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
   const resultsRef = useRef<HTMLDivElement | null>(null);
   const [resolvedAddresses, setResolvedAddresses] = useState<Record<string | number, string>>({});
+  const [resolvedWebsites, setResolvedWebsites] = useState<Record<string | number, string>>({});
   // High-crime city coordinates for lightweight heat overlay
   const computeCrimeHeatPoints = () => US_CRIME_HEAT_POINTS;
   // Removed API Online badge per request
@@ -304,7 +305,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     return '';
   };
 
-  // Opportunistically resolve missing street lines via Nominatim using business name + city
+  // Opportunistically resolve missing street lines and websites via Google Places, 
+  // falling back to Nominatim for addresses when needed
   useEffect(() => {
     const businesses: any[] = Array.isArray(scanResults?.businesses) ? scanResults.businesses : [];
     if (!businesses.length) return;
@@ -340,30 +342,42 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       }
       for (const b of businesses) {
         const id = b?.business_id || b?.id || b?.name;
-        if (!id || resolvedAddresses[id]) continue;
+        if (!id) continue;
         const street = getStreetAddress(b);
         const looksMissing = !(typeof street === 'string' && /\d/.test(street));
-        if (!looksMissing && !svc) continue; // already adequate
         const cityLine = getCityStateZip(b) || searchTerm;
         const q = [b?.name, cityLine].filter(Boolean).join(' ');
         let resolvedLine: string | null = null;
+        let resolvedSite: string | null = null;
         // First try Google Places (authoritative)
         if (svc) {
           try {
-            await new Promise<void>((resolve) => {
+            const place: any = await new Promise<any>((resolve) => {
               svc.textSearch({ query: q }, (results: any[], status: string) => {
-                try {
-                  if (Array.isArray(results) && results.length > 0) {
-                    const r0 = results[0];
-                    const fa = r0?.formatted_address as string | undefined;
-                    if (typeof fa === 'string' && fa.includes(',')) {
+                resolve(Array.isArray(results) && results.length > 0 ? results[0] : null);
+              });
+            });
+            if (place && place.place_id) {
+              await new Promise<void>((resolve) => {
+                svc.getDetails({ placeId: place.place_id, fields: ['formatted_address','website'] }, (det: any, _status: string) => {
+                  try {
+                    const fa = det?.formatted_address as string | undefined;
+                    if (!resolvedLine && typeof fa === 'string' && fa.includes(',')) {
                       const first = fa.split(',')[0]?.trim();
                       if (first && /\d/.test(first)) resolvedLine = first;
                     }
-                  }
-                } finally { resolve(); }
+                    const ws = det?.website as string | undefined;
+                    if (ws && typeof ws === 'string' && ws.length > 3) {
+                      resolvedSite = ws;
+                    }
+                  } finally { resolve(); }
+                });
               });
-            });
+            } else if (place?.formatted_address && !resolvedLine) {
+              const fa = place.formatted_address as string;
+              const first = fa.split(',')[0]?.trim();
+              if (first && /\d/.test(first)) resolvedLine = first;
+            }
           } catch {}
         }
         // Fallback to Nominatim if Places not available
@@ -382,7 +396,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
           } catch {}
         }
         if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
-        // Nominatim usage policy: throttle requests
+        if (resolvedSite) setResolvedWebsites(prev => ({ ...prev, [id]: resolvedSite! }));
+        // Usage policy: throttle requests
         await new Promise(res => setTimeout(res, 600));
       }
     };
@@ -711,12 +726,18 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Business Type</span><span className="text-okapi-brown-900 font-medium">{business?.business_type || business?.category || 'N/A'}</span></div>
-                            <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(() => { 
-                              const site = business?.contact?.website || business?.website; 
-                              if (!site) return (<span className="text-okapi-brown-900 font-medium">N/A</span>); 
-                              const url = site.startsWith('http') ? site : `https://${site}`; 
-                              return (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={url} target="_blank" rel="noopener noreferrer">{site}</a>); 
-                            })()}</div>
+                            <div className="flex justify-between truncate">
+                              <span className="text-okapi-brown-500">Website</span>
+                              {(() => {
+                                const id = business?.business_id || business?.id || business?.name;
+                                const siteRaw = resolvedWebsites[id] || business?.contact?.website || business?.website;
+                                if (!siteRaw) return (<span className="text-okapi-brown-900 font-medium">N/A</span>);
+                                const url = String(siteRaw).startsWith('http') ? String(siteRaw) : `https://${String(siteRaw)}`;
+                                return (
+                                  <a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={url} target="_blank" rel="noopener noreferrer">{siteRaw}</a>
+                                );
+                              })()}
+                            </div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Gmap rating</span><span className="text-okapi-brown-900 font-medium">{business?.gmap_rating ?? business?.metrics?.rating ?? 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Min Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.min_revenue ? `$${(business.computed.min_revenue).toLocaleString()}` : 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Max Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.max_revenue ? `$${(business.computed.max_revenue).toLocaleString()}` : 'N/A'}</span></div>
