@@ -305,8 +305,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     return '';
   };
 
-  // Opportunistically resolve missing street lines and websites via Google Places, 
-  // falling back to Nominatim for addresses when needed
+  // Opportunistically resolve missing street lines and websites via Google Places,
+  // falling back to Nominatim for addresses when needed (batched concurrency)
   useEffect(() => {
     const businesses: any[] = Array.isArray(scanResults?.businesses) ? scanResults.businesses : [];
     if (!businesses.length) return;
@@ -340,9 +340,10 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       if (g && g.maps?.places) {
         try { svc = new g.maps.places.PlacesService(document.createElement('div')); } catch {}
       }
-      for (const b of businesses) {
+      const normalizeUrl = (u?: string) => (typeof u === 'string' && u.trim()) ? (u.startsWith('http') ? u : `https://${u}`) : '';
+      const resolveOne = async (b: any) => {
         const id = b?.business_id || b?.id || b?.name;
-        if (!id) continue;
+        if (!id) return;
         const street = getStreetAddress(b);
         const looksMissing = !(typeof street === 'string' && /\d/.test(street));
         const cityLine = getCityStateZip(b) || searchTerm;
@@ -368,7 +369,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                     }
                     const ws = det?.website as string | undefined;
                     if (ws && typeof ws === 'string' && ws.length > 3) {
-                      resolvedSite = ws;
+                      resolvedSite = normalizeUrl(ws);
                     }
                   } finally { resolve(); }
                 });
@@ -397,8 +398,11 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         }
         if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
         if (resolvedSite) setResolvedWebsites(prev => ({ ...prev, [id]: resolvedSite! }));
-        // Usage policy: throttle requests
-        await new Promise(res => setTimeout(res, 250));
+      };
+      const maxParallel = 8;
+      for (let i = 0; i < businesses.length; i += maxParallel) {
+        const batch = businesses.slice(i, i + maxParallel);
+        await Promise.all(batch.map(resolveOne));
       }
     };
     run();
@@ -730,17 +734,12 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                               <span className="text-okapi-brown-500">Website</span>
                               {(() => {
                                 const id = business?.business_id || business?.id || business?.name;
-                                // Choose in order: resolved site from Places, backend contact.website, backend website
-                                let siteRaw = resolvedWebsites[id] || business?.contact?.website || business?.website;
-                                // If siteRaw is like "www.example.com" add protocol. If it's a suspicious placeholder like "N/A" or city name, treat as missing.
-                                if (typeof siteRaw === 'string') {
-                                  const s = siteRaw.trim();
-                                  if (!s || s.toLowerCase() === 'n/a' || s.toLowerCase() === 'website' || /\s/.test(s)) siteRaw = '' as any;
-                                }
+                                const siteRaw = resolvedWebsites[id] || business?.contact?.website || business?.website;
                                 if (!siteRaw) return (<span className="text-okapi-brown-900 font-medium">N/A</span>);
-                                const url = String(siteRaw).startsWith('http') ? String(siteRaw) : `https://${String(siteRaw)}`;
+                                const s = String(siteRaw).trim();
+                                const url = s.startsWith('http') ? s : `https://${s}`;
                                 return (
-                                  <a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={url} target="_blank" rel="noopener noreferrer">{siteRaw}</a>
+                                  <a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={url} target="_blank" rel="noopener noreferrer">{s}</a>
                                 );
                               })()}
                             </div>
@@ -759,7 +758,14 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                           <div className="flex items-center justify-between pt-3 border-t border-okapi-brown-100">
                             <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskColor(business?.analysis?.succession_risk?.risk_score ?? business.succession_risk_score)}`}>{getRiskLevel(business?.analysis?.succession_risk?.risk_score ?? business.succession_risk_score)}</span>
                             <div className="flex items-center gap-3">
-                              {(business?.contact?.website || business.website) && (<a href={business?.contact?.website || business.website} target="_blank" rel="noopener noreferrer" className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"><ExternalLink className="w-4 h-4" /></a>)}
+                              {(() => {
+                                const id = business?.business_id || business?.id || business?.name;
+                                const siteRaw = resolvedWebsites[id] || business?.contact?.website || business?.website;
+                                if (!siteRaw) return null;
+                                const s = String(siteRaw).trim();
+                                const url = s.startsWith('http') ? s : `https://${s}`;
+                                return (<a href={url} target="_blank" rel="noopener noreferrer" className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"><ExternalLink className="w-4 h-4" /></a>);
+                              })()}
                               <button onClick={() => focusBusinessOnMap(business)} className="text-okapi-brown-600 hover:text-okapi-brown-800 transition-colors"><MapPin className="w-4 h-4" /></button>
                             </div>
                           </div>
