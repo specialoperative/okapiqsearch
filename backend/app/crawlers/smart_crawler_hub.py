@@ -1182,9 +1182,19 @@ class GoogleSerpAgent:
                 name = (item.get("title") or item.get("name") or "Business").strip()
                 rating = item.get("rating") or item.get("rating_number") or item.get("user_ratings") or 0
                 review_count = item.get("reviews") or item.get("reviews_count") or item.get("user_ratings_total") or 0
-                address = item.get("formatted_address") or item.get("address") or item.get("snippet") or item.get("full_address")
+                address = item.get("formatted_address") or item.get("address") or item.get("full_address") or item.get("snippet")
                 phone = item.get("international_phone_number") or item.get("phone_number") or item.get("phone")
                 website = item.get("website") or item.get("link") or item.get("local_result_link")
+                data_id = item.get("data_id") or item.get("place_id") or item.get("data_id")
+                coords = None
+                try:
+                    gc = item.get("gps_coordinates") or {}
+                    lat_v = gc.get("latitude")
+                    lng_v = gc.get("longitude")
+                    if isinstance(lat_v, (int,float)) and isinstance(lng_v, (int,float)):
+                        coords = [lat_v, lng_v]
+                except Exception:
+                    pass
 
                 # Basic estimates similar to GoogleScapeAgent
                 base_revenue = 1000000
@@ -1204,8 +1214,9 @@ class GoogleSerpAgent:
                     "years_in_business": max(3, min(30, int((review_count or 10) / 5 + (rating or 3) * 2))),
                     "succession_risk_score": min(100, max(30, int((review_count or 10) / 2 + (5 - (rating or 3)) * 10))),
                     "owner_age_estimate": 45,
-                    "coordinates": None,
-                    "source": "Google SERP via SerpAPI"
+                    "coordinates": coords,
+                    "source": "Google SERP via SerpAPI",
+                    "place_data_id": data_id
                 }
                 # add flat email key to align across sources
                 item_out["email"] = None

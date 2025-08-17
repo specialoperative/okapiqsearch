@@ -605,20 +605,38 @@ async def comprehensive_market_scan(
         max_businesses = min(request.max_businesses or 20, 25)  # Cap at 25 max
         sample_businesses = sample_businesses[:max_businesses]
         
+        def _parse_city_state_zip(addr_text: str):
+            try:
+                parts = [p.strip() for p in (addr_text or "").split(',') if p and p.strip()]
+                city = None; state = None; zip_code = None
+                if len(parts) >= 2:
+                    tail = ','.join(parts[1:])
+                    import re
+                    m = re.search(r"([A-Za-z .'-]+),?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?", tail)
+                    if m:
+                        city = m.group(1).strip()
+                        state = m.group(2)
+                        zip_code = m.group(3)
+                return city, state, zip_code
+            except Exception:
+                return None, None, None
+
         for i, biz in enumerate(sample_businesses):  # Process sample businesses
             try:
                 # Quick normalization without heavy processing
+                formatted_addr = biz.get('address', '')
+                city_p, state_p, zip_p = _parse_city_state_zip(formatted_addr)
                 normalized = {
                     'business_id': f"raw_{i}_{hash(str(biz))}",
                     'name': biz.get('name', 'Unknown Business'),
                     'category': biz.get('industry', request.industry or 'hvac'),
                     'industry': biz.get('industry', request.industry or 'hvac'),
                     'address': {
-                        'formatted_address': biz.get('address', ''),
-                        'line1': biz.get('address', '').split(',')[0].strip() if biz.get('address') else None,
-                        'city': biz.get('address', '').split(',')[1].strip() if biz.get('address') and len(biz.get('address', '').split(',')) > 1 else request.location,
-                        'state': 'CA',
-                        'zip_code': biz.get('address', '').split()[-1] if biz.get('address') and biz.get('address', '').split()[-1].isdigit() else None,
+                        'formatted_address': formatted_addr,
+                        'line1': formatted_addr.split(',')[0].strip() if formatted_addr else None,
+                        'city': city_p or request.location,
+                        'state': state_p or 'CA',
+                        'zip_code': zip_p,
                         'coordinates': biz.get('coordinates', [])
                     },
                     'contact': {
@@ -636,6 +654,13 @@ async def comprehensive_market_scan(
                         'employee_count': max(int(biz.get('reviews', 0) / 50), 2),  # Rough estimate
                         'years_in_business': min(max(int(biz.get('reviews', 0) / 20), 5), 30),  # Rough estimate
                         'lead_score': min(int(biz.get('rating', 0) * 12.4), 62)  # Score based on rating
+                    },
+                    'computed': {
+                        'min_revenue': int((biz.get('rating', 0) or 0) * 50000) if biz.get('rating') else None,
+                        'max_revenue': int(max(biz.get('reviews', 0) or 0, 1) * 10000) if biz.get('reviews') is not None else None,
+                        'owner_age': 45,
+                        'num_locations': 1,
+                        'source': biz.get('source', 'google_serp')
                     },
                     'data_quality': 'medium',
                     'data_sources': quick_sources,
