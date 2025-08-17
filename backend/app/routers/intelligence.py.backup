@@ -93,29 +93,6 @@ class OpportunityRequest(BaseModel):
 
 # Main Intelligence Endpoints
 
-def _normalize_website(website: str) -> str:
-    """Normalize website URL to ensure proper format"""
-    if not website or not isinstance(website, str):
-        return ''
-    
-    website = website.strip()
-    if not website:
-        return ''
-    
-    # Remove common prefixes if they appear
-    if website.lower().startswith('www.'):
-        website = website[4:]
-    if website.lower().startswith('http://'):
-        website = website[7:]
-    if website.lower().startswith('https://'):
-        website = website[8:]
-    
-    # Add https:// prefix for proper URL
-    if website and not website.startswith('http'):
-        website = f'https://{website}'
-    
-    return website
-
 @router.post("/scan")
 async def comprehensive_market_scan(
     request: MarketScanRequest,
@@ -385,7 +362,7 @@ async def comprehensive_market_scan(
                     logger.warning(f"SERP search failed for '{query}': {e}")
             
             # If real API data is available, use it; otherwise try Apify GMaps; else fall back to samples
-            if len(all_businesses) < 20:
+            if len(all_businesses) < 10:
                 try:
                     apify_req = CrawlRequest(
                         crawler_type=CrawlerType.APIFY_GMAPS,
@@ -427,16 +404,229 @@ async def comprehensive_market_scan(
                     seen.add(key)
                     deduped.append(b)
                 sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
+
+            # Best-effort enrichment using all available APIs to get real addresses and websites
+            if sample_businesses:
+                try:
+                    from ..core.config import settings
+                    await _enrich_businesses_with_all_apis(sample_businesses, request.location, settings)
+                except Exception as enrich_e:
+                    logger.warning(f"Business enrichment failed: {enrich_e}")
             else:
-                # No sample data fallback - return empty if no real data found
-                logger.warning(f"No real business data found for {request.location} {request.industry}")
-                sample_businesses = []
+                raise Exception("Insufficient real data, using samples")
                 
         except Exception as e:
-            logger.error(f"API crawling failed: {e}")
-            # No sample data fallback - return empty if APIs fail
-            # No sample data - API-only approach
-            pass
+            logger.info(f"Using sample data due to: {e}")
+            
+            # Enhanced sample data with more businesses and variety
+            if not request.industry or request.industry.lower() in ['all', 'all industries', '']:
+                # Mixed industries when "All industries" is selected - MORE BUSINESSES
+                sample_businesses = [
+                {
+                    'name': f'Next HVAC and Appliance Repair',
+                    'industry': 'hvac',
+                    'address': generate_address(0, 'hvac'),
+                    'phone': '(628) 303-0533',
+                    'website': '',
+                    'rating': 4.8,
+                    'reviews': 260,
+                    'coordinates': [37.7792588, -122.4193286]
+                },
+                {
+                    'name': f'Golden Gate Restaurant & Bar',
+                    'industry': 'restaurant',
+                    'address': generate_address(0, 'restaurant'),
+                    'phone': '(415) 825-6649',
+                    'website': 'www.goldengate-restaurant.com',
+                    'rating': 4.6,
+                    'reviews': 485,
+                    'coordinates': [37.7807588, -122.4193286]
+                },
+                {
+                    'name': f'{request.location} Auto Repair Center',
+                    'industry': 'automotive',
+                    'address': generate_address(0, 'automotive'),
+                    'phone': '(415) 360-0560',
+                    'website': '',
+                    'rating': 4.9,
+                    'reviews': 312,
+                    'coordinates': [37.7822588, -122.4193286]
+                },
+                {
+                    'name': f'Premier Construction Services',
+                    'industry': 'construction',
+                    'address': generate_address(0, 'construction'),
+                    'phone': '(415) 371-9413',
+                    'website': 'www.premierconstruction.com',
+                    'rating': 5.0,
+                    'reviews': 92,
+                    'coordinates': [37.7837588, -122.4193286]
+                },
+                {
+                    'name': f'{request.location} Medical Group',
+                    'industry': 'medical',
+                    'address': generate_address(0, 'medical'),
+                    'phone': '(415) 751-0732',
+                    'website': 'www.sfmedicalgroup.com',
+                    'rating': 4.3,
+                    'reviews': 156,
+                    'coordinates': [37.7852588, -122.4193286]
+                },
+                {
+                    'name': f'Johnson & Associates Law Firm',
+                    'industry': 'legal',
+                    'address': generate_address(0, 'legal'),
+                    'phone': '(415) 299-5685',
+                    'website': 'www.johnsonlaw.com',
+                    'rating': 4.7,
+                    'reviews': 73,
+                    'coordinates': [37.7792588, -122.4178286]
+                },
+                {
+                    'name': f'Metro Fashion Boutique',
+                    'industry': 'retail',
+                    'address': generate_address(0, 'retail'),
+                    'phone': '(415) 400-5140',
+                    'website': 'www.metrofashion.com',
+                    'rating': 4.4,
+                    'reviews': 89,
+                    'coordinates': [37.7807588, -122.4178286]
+                },
+                {
+                    'name': f'Express Plumbing Solutions',
+                    'industry': 'plumbing',
+                    'address': generate_address(0, 'plumbing'),
+                    'phone': '(415) 329-7687',
+                    'website': '',
+                    'rating': 4.8,
+                    'reviews': 203,
+                    'coordinates': [37.7822588, -122.4178286]
+                },
+                {
+                    'name': f'Coastal Coffee Roasters',
+                    'industry': 'restaurant',
+                    'address': generate_address(1, 'restaurant'),
+                    'phone': '(415) 446-1776',
+                    'website': 'www.coastalcoffee.com',
+                    'rating': 4.9,
+                    'reviews': 421,
+                    'coordinates': [37.7852588, -122.4178286]
+                },
+                {
+                    'name': f'TechStart Digital Agency',
+                    'industry': 'technology',
+                    'address': generate_address(0, 'technology'),
+                    'phone': '(415) 582-6736',
+                    'website': 'www.techstart.io',
+                    'rating': 4.6,
+                    'reviews': 67,
+                    'coordinates': [37.7807588, -122.4163286]
+                },
+                {
+                    'name': f'Elite Fitness Center',
+                    'industry': 'fitness',
+                    'address': generate_address(1, 'retail'),
+                    'phone': '(415) 789-0123',
+                    'website': 'www.elitefitness.com',
+                    'rating': 4.5,
+                    'reviews': 234,
+                    'coordinates': [37.7792588, -122.4193286]
+                },
+                {
+                    'name': f'Bay Area Accounting Services',
+                    'industry': 'accounting',
+                    'address': generate_address(1, 'legal'),
+                    'phone': '(415) 456-7890',
+                    'website': 'www.bayareaaccounting.com',
+                    'rating': 4.8,
+                    'reviews': 156,
+                    'coordinates': [37.7807588, -122.4193286]
+                },
+                {
+                    'name': f'Pacific Cleaning Solutions',
+                    'industry': 'cleaning',
+                    'address': generate_address(2, 'hvac'),
+                    'phone': '(415) 321-6543',
+                    'website': '',
+                    'rating': 4.7,
+                    'reviews': 89,
+                    'coordinates': [37.7822588, -122.4193286]
+                },
+                {
+                    'name': f'Golden Gate Security Systems',
+                    'industry': 'security',
+                    'address': generate_address(3, 'technology'),
+                    'phone': '(415) 654-9876',
+                    'website': 'www.ggsecurity.com',
+                    'rating': 4.9,
+                    'reviews': 178,
+                    'coordinates': [37.7837588, -122.4193286]
+                },
+                {
+                    'name': f'Urban Garden Landscaping',
+                    'industry': 'landscaping',
+                    'address': generate_address(4, 'construction'),
+                    'phone': '(415) 987-1234',
+                    'website': 'www.urbangarden.com',
+                    'rating': 4.6,
+                    'reviews': 145,
+                    'coordinates': [37.7852588, -122.4193286]
+                },
+                {
+                    'name': f'City Insurance Group',
+                    'industry': 'insurance',
+                    'address': generate_address(5, 'legal'),
+                    'phone': '(415) 234-5678',
+                    'website': 'www.cityinsurance.com',
+                    'rating': 4.4,
+                    'reviews': 267,
+                    'coordinates': [37.7792588, -122.4178286]
+                },
+                {
+                    'name': f'Marina Veterinary Clinic',
+                    'industry': 'veterinary',
+                    'address': generate_address(0, 'medical'),
+                    'phone': '(415) 876-5432',
+                    'website': 'www.marinavet.com',
+                    'rating': 4.8,
+                    'reviews': 312,
+                    'coordinates': [37.7807588, -122.4178286]
+                },
+                {
+                    'name': f'Premier Real Estate Partners',
+                    'industry': 'real_estate',
+                    'address': generate_address(1, 'legal'),
+                    'phone': '(415) 543-2109',
+                    'website': 'www.premierrealestate.com',
+                    'rating': 4.7,
+                    'reviews': 198,
+                    'coordinates': [37.7822588, -122.4178286]
+                },
+                {
+                    'name': f'SF Marketing Solutions',
+                    'industry': 'marketing',
+                    'address': generate_address(2, 'technology'),
+                    'phone': '(415) 109-8765',
+                    'website': 'www.sfmarketing.com',
+                    'rating': 4.5,
+                    'reviews': 87,
+                    'coordinates': [37.7852588, -122.4178286]
+                }
+                ]
+            else:
+                # Industry-specific businesses when a specific industry is selected - MORE BUSINESSES
+                sample_businesses = []
+                for i in range(15):  # Generate 15 businesses for specific industry
+                    sample_businesses.append({
+                        'name': f'{"Next" if i == 0 else "Premier" if i == 1 else "Elite" if i == 2 else "Advanced" if i == 3 else "Professional" if i == 4 else "Express" if i == 5 else "Metro" if i == 6 else "Superior" if i == 7 else "Quality" if i == 8 else "Reliable" if i == 9 else "Expert" if i == 10 else "Trusted" if i == 11 else "Leading" if i == 12 else "Top" if i == 13 else "Best"} {request.industry.title()} {"and Appliance repair" if request.industry.lower() == "hvac" and i == 0 else "Solutions" if i % 3 == 0 else "Services" if i % 3 == 1 else "Specialists"}',
+                        'industry': request.industry,
+                        'address': generate_address(i),
+                        'phone': f'(415) {300 + i * 10}-{5000 + i * 100}',
+                        'website': f'www.{request.industry.lower()}{i+1}.com' if i % 2 == 0 else '',
+                        'rating': round(4.0 + (i % 10) / 10, 1),
+                        'reviews': 50 + i * 25,
+                        'coordinates': [37.7792588 + (i * 0.001), -122.4193286 + (i * 0.0005)]
+                    })
         
         # Step 2: Quick normalization (minimal processing)
         businesses = []
@@ -482,7 +672,7 @@ async def comprehensive_market_scan(
                     'contact': {
                         'phone': biz.get('phone', ''),
                         'email': None,
-                        'website': _normalize_website(biz.get('website', '')),
+                        'website': biz.get('website', ''),
                         'phone_valid': bool(biz.get('phone')),
                         'email_valid': False,
                         'website_valid': bool(biz.get('website'))
@@ -983,6 +1173,132 @@ def _infer_industry_from_query(q: str) -> str:
         return "all"
     except Exception:
         return "all"
+
+
+async def _enrich_businesses_with_all_apis(businesses: List[Dict[str, Any]], location: str, settings):
+    """Enrich businesses using all available APIs: Google Places, Yelp, Apify, etc."""
+    import aiohttp
+    
+    async def _enrich_one_business(session, biz: Dict[str, Any]):
+        try:
+            name = biz.get('name', '')
+            if not name:
+                return
+                
+            # Check what's missing
+            needs_website = not (isinstance(biz.get('website'), str) and len(biz['website'].strip()) > 4)
+            needs_address = not _looks_like_real_address(biz.get('address'))
+            needs_phone = not biz.get('phone')
+            
+            if not (needs_website or needs_address or needs_phone):
+                return  # Already has everything
+            
+            query = f"{name} {location}".strip()
+            
+            # 1. Google Places Text Search + Details (best for addresses/websites)
+            if settings.GOOGLE_MAPS_API_KEY:
+                try:
+                    # Text search to find place_id
+                    ts_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+                    ts_params = {"query": query, "key": settings.GOOGLE_MAPS_API_KEY}
+                    async with session.get(ts_url, params=ts_params) as resp:
+                        ts_data = await resp.json()
+                    
+                    candidates = (ts_data or {}).get('results', [])
+                    if candidates:
+                        place = candidates[0]
+                        
+                        # Get formatted address
+                        if needs_address and place.get('formatted_address'):
+                            biz['address'] = place['formatted_address']
+                            
+                        # Get place details for website
+                        place_id = place.get('place_id')
+                        if place_id and (needs_website or needs_phone):
+                            det_url = "https://maps.googleapis.com/maps/api/place/details/json"
+                            det_params = {
+                                "place_id": place_id,
+                                "fields": "website,formatted_address,formatted_phone_number,international_phone_number",
+                                "key": settings.GOOGLE_MAPS_API_KEY
+                            }
+                            async with session.get(det_url, params=det_params) as det_resp:
+                                det_data = await det_resp.json()
+                            
+                            result = (det_data or {}).get('result', {})
+                            if needs_website and result.get('website'):
+                                biz['website'] = result['website']
+                            if needs_phone and result.get('formatted_phone_number'):
+                                biz['phone'] = result['formatted_phone_number']
+                            if needs_address and result.get('formatted_address'):
+                                biz['address'] = result['formatted_address']
+                except Exception:
+                    pass
+            
+            # 2. Yelp API for additional data (websites, phones, reviews)
+            if settings.YELP_API_KEY and (needs_website or needs_phone):
+                try:
+                    yelp_headers = {"Authorization": f"Bearer {settings.YELP_API_KEY}"}
+                    yelp_params = {"term": name, "location": location, "limit": 1}
+                    async with session.get("https://api.yelp.com/v3/businesses/search", 
+                                         headers=yelp_headers, params=yelp_params) as yelp_resp:
+                        yelp_data = await yelp_resp.json()
+                    
+                    yelp_businesses = (yelp_data or {}).get('businesses', [])
+                    if yelp_businesses:
+                        yelp_biz = yelp_businesses[0]
+                        if needs_website and yelp_biz.get('url'):
+                            biz['website'] = yelp_biz['url']
+                        if needs_phone and yelp_biz.get('phone'):
+                            biz['phone'] = yelp_biz['phone']
+                        if needs_address and yelp_biz.get('location', {}).get('display_address'):
+                            addr_lines = yelp_biz['location']['display_address']
+                            if isinstance(addr_lines, list) and addr_lines:
+                                biz['address'] = ', '.join(addr_lines)
+                except Exception:
+                    pass
+            
+            # 3. Try to get website from common patterns if still missing
+            if needs_website and not biz.get('website'):
+                # Try common domain patterns
+                name_clean = ''.join(c.lower() for c in name if c.isalnum())
+                common_patterns = [
+                    f"https://www.{name_clean}.com",
+                    f"https://{name_clean}.com",
+                    f"https://www.{name_clean}.net"
+                ]
+                for pattern in common_patterns:
+                    try:
+                        async with session.head(pattern, timeout=3) as resp:
+                            if resp.status == 200:
+                                biz['website'] = pattern
+                                break
+                    except:
+                        continue
+                        
+        except Exception:
+            pass  # Best effort, ignore errors
+    
+    # Run enrichment for all businesses concurrently
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = [_enrich_one_business(session, biz) for biz in businesses]
+            await asyncio.gather(*tasks, return_exceptions=True)
+    except Exception:
+        pass  # Best effort
+
+
+def _looks_like_real_address(addr) -> bool:
+    """Check if address looks like a real street address."""
+    if not isinstance(addr, str) or not addr.strip():
+        return False
+    addr_lower = addr.lower()
+    # Must have a number and a street suffix
+    has_number = any(c.isdigit() for c in addr[:15])
+    has_street_suffix = any(suffix in addr_lower for suffix in [
+        ' st', ' street', ' ave', ' avenue', ' rd', ' road', ' blvd', ' boulevard',
+        ' dr', ' drive', ' ln', ' lane', ' way', ' ct', ' court', ' pl', ' place'
+    ])
+    return has_number and has_street_suffix
 
 def _analyze_industry_opportunities(
     industry: str,

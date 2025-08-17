@@ -370,16 +370,16 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         if (!resolvedLine) {
           try {
             const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&accept-language=en-US&q=${encodeURIComponent(q)}&email=okapiq-support@okapiq.com`;
-            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            const data = await resp.json();
-            if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
-              const addr = data[0].address as any;
-              const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
-              if (line1 && /\d/.test(line1)) {
+          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const data = await resp.json();
+          if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
+            const addr = data[0].address as any;
+            const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
+            if (line1 && /\d/.test(line1)) {
                 resolvedLine = line1;
-              }
             }
-          } catch {}
+          }
+        } catch {}
         }
         if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
         // Nominatim usage policy: throttle requests
@@ -672,8 +672,25 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
 
               {/* List View */}
               {viewMode === 'list' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(scanResults.businesses || []).map((business: any, index: number) => (
+                <>
+                  {(!scanResults.businesses || scanResults.businesses.length === 0) ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                      <div className="w-16 h-16 rounded-full bg-okapi-brown-100 flex items-center justify-center">
+                        <Search className="w-8 h-8 text-okapi-brown-500" />
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-lg font-semibold text-okapi-brown-900 mb-2">No Businesses Found</h3>
+                        <p className="text-okapi-brown-600 mb-4">No real business data found for your search criteria. Try:</p>
+                        <ul className="text-sm text-okapi-brown-500 space-y-1">
+                          <li>• Expanding to a larger city or region</li>
+                          <li>• Selecting "All Industries" for broader results</li>
+                          <li>• Checking if API keys are properly configured</li>
+                        </ul>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {(scanResults.businesses || []).map((business: any, index: number) => (
                     <motion.div
                       key={`${business.name}-${index}`}
                       initial={{ opacity: 0, y: 20 }}
@@ -711,7 +728,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Business Type</span><span className="text-okapi-brown-900 font-medium">{business?.business_type || business?.category || 'N/A'}</span></div>
-                            <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(()=>{const w = (business?.contact?.website || business?.website || '').trim(); if (!w) return (<span className="text-okapi-brown-900 font-medium">N/A</span>); const href = /^https?:\/\//i.test(w) ? w : `https://${w}`; return (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={href} target="_blank" rel="noopener noreferrer">{w}</a>); })()}</div>
+                                                         <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(()=>{const w = (business?.contact?.website || business?.website || '').trim(); if (!w || w === 'N/A') return (<span className="text-okapi-brown-900 font-medium">N/A</span>); const href = w.startsWith('http') ? w : `https://${w}`; const display = w.replace(/^https?:\/\//i, '').replace(/^www\./i, ''); return (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={href} target="_blank" rel="noopener noreferrer">{display}</a>); })()}</div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Gmap rating</span><span className="text-okapi-brown-900 font-medium">{business?.gmap_rating ?? business?.metrics?.rating ?? 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Min Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.min_revenue ? `$${(business.computed.min_revenue).toLocaleString()}` : 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Max Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.max_revenue ? `$${(business.computed.max_revenue).toLocaleString()}` : 'N/A'}</span></div>
@@ -734,8 +751,10 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                         </div>
                       </div>
                     </motion.div>
-                  ))}
-                </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           )}
