@@ -648,6 +648,16 @@ async def comprehensive_market_scan(
                 # Quick normalization without heavy processing
                 formatted_addr = biz.get('address', '')
                 city_p, state_p, zip_p = _parse_city_state_zip(formatted_addr)
+                def _street_line(addr: str):
+                    try:
+                        first = (addr or '').split(',')[0].strip()
+                        import re
+                        if re.search(r"\d{1,6}\s+.+", first) or re.search(r"(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)", first, re.I):
+                            return first
+                        return None
+                    except Exception:
+                        return None
+                line1_val = _street_line(formatted_addr)
                 normalized = {
                     'business_id': f"raw_{i}_{hash(str(biz))}",
                     'name': biz.get('name', 'Unknown Business'),
@@ -655,7 +665,7 @@ async def comprehensive_market_scan(
                     'industry': biz.get('industry', request.industry or 'hvac'),
                     'address': {
                         'formatted_address': formatted_addr,
-                        'line1': formatted_addr.split(',')[0].strip() if formatted_addr else None,
+                        'line1': line1_val,
                         'city': city_p or request.location,
                         'state': state_p or 'CA',
                         'zip_code': zip_p,

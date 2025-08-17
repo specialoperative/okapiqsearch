@@ -242,7 +242,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
 
   // Display the best-available street line. Prefer explicit street fields; otherwise parse from formatted text.
   const getStreetAddress = (b: any): string => {
-    // 1) Common field variants
+    const looksStreet = (s: string) => /\d{1,6}\s+.+/.test(s) || /(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)/i.test(s);
+    // 1) Common field variants (accept only if looks like a street)
     const candidates = [
       b?.address?.line1,
       b?.address_line1,
@@ -257,14 +258,17 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       typeof b?.address === 'string' ? b.address : undefined
     ];
     for (const c of candidates) {
-      if (typeof c === 'string' && c.trim()) return c.trim();
+      if (typeof c === 'string') {
+        const trimmed = c.trim();
+        if (trimmed && looksStreet(trimmed)) return trimmed;
+      }
     }
     // 2) Parse from formatted strings
     const formatted = b?.address_formatted || b?.address?.formatted_address || b?.formatted_address || b?.location?.address || '';
     if (typeof formatted === 'string' && formatted.trim()) {
       // If the first comma-separated segment looks like a street (contains a number), use it
       const first = formatted.split(',')[0]?.trim() || '';
-      const looksLikeStreet = /\d{1,6}\s+.+/.test(first) || /(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)/i.test(first);
+      const looksLikeStreet = looksStreet(first);
       if (looksLikeStreet) return first;
       // Otherwise, search anywhere in the string for a street-like pattern
       const m = formatted.match(/\d{1,6}\s+[^,]+?(?:\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln|Way|Place|Pl))\b/i);
