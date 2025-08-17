@@ -292,8 +292,24 @@ async def comprehensive_market_scan(
                     f"accounting firms {request.location}",
                 ]
             else:
-                # Single industry search
-                search_queries = [f"{request.industry} {request.location}"]
+                # Single industry search with keyword mapping for better results
+                ind = (request.industry or '').strip().lower()
+                keyword_map = {
+                    'electrical': ['electrician', 'electrical contractor'],
+                    'hvac': ['hvac', 'heating and air'],
+                    'plumbing': ['plumber', 'plumbing company'],
+                    'landscaping': ['landscaping', 'lawn care'],
+                    'automotive': ['auto repair', 'mechanic'],
+                    'construction': ['construction company', 'general contractor'],
+                    'restaurant': ['restaurant'],
+                    'retail': ['retail store'],
+                    'healthcare': ['clinic', 'medical clinic'],
+                    'it services': ['it services', 'managed it'],
+                    'real estate': ['real estate agency'],
+                    'education': ['tutoring center', 'school'],
+                }
+                base_terms = keyword_map.get(ind, [ind or 'business'])
+                search_queries = [f"{t} {request.location}" for t in base_terms]
             
             # Aggregate data from multiple sources
             all_businesses = []
@@ -313,17 +329,23 @@ async def comprehensive_market_scan(
                     crawl_res = await crawler_hub._execute_crawl(crawl_req)
                     if crawl_res and crawl_res.success:
                         # Keep only entries with both name and a real-looking street address (number + street)
-                        for item in crawl_res.data[:12]:
+                        for item in crawl_res.data[:20]:
                             name_val = item.get('name')
                             addr_val = item.get('address')
-                            if not (isinstance(name_val, str) and isinstance(addr_val, str)):
+                            if not isinstance(name_val, str):
                                 continue
                             name_val = name_val.strip()
-                            addr_val = addr_val.strip()
-                            if not name_val or not addr_val:
+                            if not name_val:
                                 continue
-                            looks_like_street = any(x in addr_val.lower() for x in [' st', ' street', ' ave', ' avenue', ' rd', ' road', ' blvd', ' boulevard', ' dr', ' drive']) and any(ch.isdigit() for ch in addr_val[:8])
-                            if not looks_like_street:
+                            addr_val = (addr_val or '').strip()
+                            looks_like_street = False
+                            if isinstance(addr_val, str) and addr_val:
+                                low = addr_val.lower()
+                                looks_like_street = (any(x in low for x in [' st', ' street', ' ave', ' avenue', ' rd', ' road', ' blvd', ' boulevard', ' dr', ' drive', ' ln', ' lane', ' way', ' ct', ' court']) and any(ch.isdigit() for ch in addr_val[:12]))
+                            has_coords = isinstance(item.get('coordinates'), (list, tuple)) and len(item.get('coordinates')) == 2
+                            has_site = isinstance(item.get('website'), str) and len(item.get('website')) > 4
+                            # Accept if street-like OR have coords/site (we can verify client-side)
+                            if not (looks_like_street or has_coords or has_site):
                                 continue
                             all_businesses.append({
                                 'name': name_val,
@@ -346,7 +368,7 @@ async def comprehensive_market_scan(
                         crawler_type=CrawlerType.APIFY_GMAPS,
                         target_url="apify://apify/google-maps-scraper",
                         search_params={
-                            'search': f"{(request.industry or 'business')} {request.location}",
+                            'search': f"{(base_terms[0] if (request and request.industry) else 'business')} {request.location}",
                             'maxCrawledPlacesPerSearch': 50
                         },
                         priority=1
