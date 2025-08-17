@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import BuyBoxForm from "@/components/BuyBoxForm";
 import dynamic from 'next/dynamic';
 
-const InteractiveMap = dynamic(() => import('../../components/interactive-map'), {
+const InteractiveMap = dynamic(() => import('../../components/interactive-map-google'), {
   ssr: false,
   loading: () => <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">Loading map...</div>
 });
@@ -40,7 +40,7 @@ interface BuyBox {
 }
 
 export default function BuyBoxPage() {
-  const { user, token, loading } = useAuth();
+  const { user, token, loading, logout } = useAuth();
   const [buyBoxes, setBuyBoxes] = React.useState<BuyBox[]>([]);
   const [showForm, setShowForm] = React.useState(false);
   const [editingBuyBox, setEditingBuyBox] = React.useState<BuyBox | null>(null);
@@ -107,17 +107,41 @@ export default function BuyBoxPage() {
     if (!confirm('Are you sure you want to delete this buy box?')) return;
 
     try {
+      if (!token) {
+        setMessage('Please sign in to delete buy boxes.');
+        return;
+      }
       const res = await fetch(`${apiBase}/buy-box/${buyBoxId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (res.ok) {
-        setMessage('Buy box deleted successfully!');
+        // Optimistically update UI
+        setBuyBoxes(prev => prev.filter(b => b.id !== buyBoxId));
+        // Background re-sync to ensure consistency
         fetchBuyBoxes();
-      } else {
-        setMessage('Failed to delete buy box');
+        setMessage('Buy box deleted successfully!');
+        return;
       }
+
+      // Handle common error statuses with clearer messages
+      if (res.status === 404) {
+        // Already deleted or not found; update UI anyway
+        setBuyBoxes(prev => prev.filter(b => b.id !== buyBoxId));
+        fetchBuyBoxes();
+        setMessage('Buy box not found (already deleted).');
+        return;
+      }
+
+      if (res.status === 401 || res.status === 403) {
+        setMessage('Your session has expired. Please sign in again.');
+        try { logout(); } catch {}
+        return;
+      }
+
+      const errText = await res.text().catch(() => '');
+      setMessage(errText ? `Failed to delete buy box: ${errText}` : 'Failed to delete buy box');
     } catch (error) {
       setMessage('Error deleting buy box');
       console.error('Delete error:', error);
@@ -175,7 +199,12 @@ export default function BuyBoxPage() {
     <main className="max-w-6xl mx-auto px-6 py-10">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Buy Box Management</h1>
+          <h1 className="text-2xl font-bold">
+            Buy Box Management
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              ({loadingBuyBoxes ? '…' : buyBoxes.length} total)
+            </span>
+          </h1>
           <p className="text-gray-600 mt-1">Define your acquisition criteria to match with relevant opportunities</p>
         </div>
         <button

@@ -80,10 +80,12 @@ export default function BuyBoxForm({ buyBox, onSave, onCancel }: BuyBoxFormProps
 
   const [contactEmailInput, setContactEmailInput] = React.useState("");
   const [contactPhoneInput, setContactPhoneInput] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    setSaving(true);
+    Promise.resolve(onSave(formData)).finally(() => setSaving(false));
   };
 
   const handleIndustryChange = (industry: string, checked: boolean) => {
@@ -134,23 +136,39 @@ export default function BuyBoxForm({ buyBox, onSave, onCancel }: BuyBoxFormProps
     }));
   };
 
-  const createAvilaPeakTemplate = async () => {
-    const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, "");
-    try {
-      const res = await fetch(`${apiBase}/buy-box/template/avila-peak`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setFormData(data);
-      }
-    } catch (error) {
-      console.error('Failed to create template:', error);
-    }
+  const createAvilaPeakTemplate = () => {
+    setFormData(prev => ({
+      ...prev,
+      name: "Avila Peak Partners Acquisition Criteria",
+      industries: [
+        "Business Services",
+        "Consumer Services",
+        "Distribution"
+      ],
+      location_type: "us_only",
+      allowed_locations: [],
+      min_ebitda: 300000,
+      min_revenue: 1500000,
+      min_ebitda_multiple: 3.0,
+      min_purchase_price: 1500000,
+      max_purchase_price: 7000000,
+      requires_management: true,
+      remote_ownable: true,
+      overseas_outsourcing: true,
+      recurring_revenue: true,
+      low_customer_concentration: true,
+      max_customer_concentration: null,
+      asset_purchase: true,
+      stock_purchase: true,
+      seller_financing: true,
+      sba_guidelines: true,
+      contact_emails: [
+        "juanmendoza@avilapeakpartners.com",
+        "marcomendoza@avilapeakpartners.com"
+      ],
+      contact_phones: [],
+      contact_notes: ""
+    }));
   };
 
   return (
@@ -490,14 +508,16 @@ export default function BuyBoxForm({ buyBox, onSave, onCancel }: BuyBoxFormProps
             type="button"
             onClick={onCancel}
             className="px-4 py-2 border rounded-md hover:bg-gray-50"
+            disabled={saving}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-60"
+            disabled={saving}
           >
-            {buyBox ? 'Update' : 'Create'} Buy Box
+            {saving ? (buyBox ? 'Saving...' : 'Saving...') : (buyBox ? 'Update' : 'Create')} Buy Box
           </button>
         </div>
       </form>

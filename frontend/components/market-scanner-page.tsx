@@ -6,7 +6,7 @@ import { US_CRIME_HEAT_POINTS } from '@/components/../lib/crimeHeat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Search, TrendingUp, Users, Building2, Target, Zap, BarChart3, Filter, MapPin, DollarSign, Calendar, Star, Phone, Mail, ExternalLink, AlertCircle, CheckCircle, Map, Globe, Database, Shield, Activity, Menu } from 'lucide-react';
 // Avoid SSR importing of Leaflet by dynamically loading the map component on the client only
-const InteractiveMap = dynamic(() => import('./interactive-map'), { ssr: false });
+const InteractiveMap = dynamic(() => import('./interactive-map-google'), { ssr: false });
 
 interface MarketScannerPageProps {
   onNavigate?: (page: string) => void;
@@ -37,11 +37,10 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   // Removed API Online badge per request
   const [working, setWorking] = useState<{active: boolean; step: string}>({active: false, step: ''});
   const workingSteps = [
-    'Crawling data sources…',
-    'Normalizing records…',
-    'AI Enrichment in progress…',
-    'Scoring & clustering…',
-    'Compiling insights…'
+    'Starting quick scan…',
+    'Finding businesses…',
+    'Processing results…',
+    'Finalizing…'
   ];
   const [workingIndex, setWorkingIndex] = useState<number>(0);
   const [sources, setSources] = useState<Record<string, boolean>>({
@@ -144,11 +143,11 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
           setWorking({ active: true, step: workingSteps[ni] });
           return ni;
         });
-      }, 900);
+      }, 600);  // Faster step progression
 
       const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const controller = new AbortController();
-      timeoutId = window.setTimeout(() => controller.abort(), 30000);
+      timeoutId = window.setTimeout(() => controller.abort(), 15000);  // Reduced timeout for faster user feedback
 
       const response = await fetch(`${apiBase}/intelligence/scan`, {
         method: 'POST',
@@ -158,25 +157,15 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         signal: controller.signal,
         body: JSON.stringify({
           location: searchTerm,
-          industry: selectedIndustry || 'hvac',
-          radius_miles: radiusMiles,
-          max_businesses: 50,
-          crawl_sources: Object.entries(sources).filter(([, v]) => v).map(([k]) => k),
-          enrichment_types: advFilters.includeRisk
-            ? ['census','irs','sos','nlp','market_intelligence','web_ai']
-            : ['census','irs','sos','nlp','market_intelligence'],
-          analysis_types: advFilters.fragmentation
-            ? ['succession_risk','tam_opportunity','market_fragmentation','growth_potential','acquisition_attractiveness','lead_score']
-            : ['succession_risk','tam_opportunity','growth_potential','acquisition_attractiveness','lead_score'],
-          use_cache: false,
-          filters: {
-            include_succession_risk: advFilters.includeRisk,
-            enable_fragmentation: advFilters.fragmentation,
-            include_linkedin_signals: advFilters.linkedinSignals,
-            min_revenue: minRevenue || undefined,
-            max_revenue: maxRevenue || undefined,
-            owner_age: ownerAge || undefined,
-          },
+          industry: selectedIndustry || '',
+          radius_miles: 15,  // Reduced for speed
+          max_businesses: 20,  // Reduced for speed
+          crawl_sources: Object.entries(sources).filter(([, v]) => v).map(([k]) => k) || ['google_serp'],
+          // Minimal processing for speed
+          enrichment_types: [],
+          analysis_types: [],
+          use_cache: true,  // Use cache when available
+          priority: 1  // High priority for speed
         }),
       });
 
@@ -253,18 +242,25 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
 
   // Display the best-available street line. Prefer explicit street fields; otherwise parse from formatted text.
   const getStreetAddress = (b: any): string => {
+    // 1) Common field variants
     const candidates = [
       b?.address?.line1,
       b?.address_line1,
       b?.address_line,
       b?.street_address,
+      b?.street1,
       b?.street,
-      b?.address?.street
+      b?.location?.street,
+      b?.address1,
+      b?.addr1,
+      b?.address?.street,
+      typeof b?.address === 'string' ? b.address : undefined
     ];
     for (const c of candidates) {
       if (typeof c === 'string' && c.trim()) return c.trim();
     }
-    const formatted = b?.address_formatted || b?.address?.formatted_address || b?.formatted_address || '';
+    // 2) Parse from formatted strings
+    const formatted = b?.address_formatted || b?.address?.formatted_address || b?.formatted_address || b?.location?.address || '';
     if (typeof formatted === 'string' && formatted.trim()) {
       // If the first comma-separated segment looks like a street (contains a number), use it
       const first = formatted.split(',')[0]?.trim() || '';
@@ -273,8 +269,10 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       // Otherwise, search anywhere in the string for a street-like pattern
       const m = formatted.match(/\d{1,6}\s+[^,]+?(?:\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln|Way|Place|Pl))\b/i);
       if (m && m[0]) return m[0].trim();
+      // If nothing matches, don't show city as a street line. Defer to resolver.
+      return 'Resolving address…';
     }
-    // As a last resort, try resolved map focus (set elsewhere)
+    // 3) Use any resolved address from client-side Nominatim enrichment
     const id = b?.business_id || b?.id || b?.name;
     if (id && resolvedAddresses[id]) return resolvedAddresses[id];
     return 'Address unavailable';
@@ -310,27 +308,82 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   useEffect(() => {
     const businesses: any[] = Array.isArray(scanResults?.businesses) ? scanResults.businesses : [];
     if (!businesses.length) return;
+    // Also verify via Google Places for authoritative addresses
+    const loadGoogle = async (): Promise<any> => {
+      if (typeof window !== 'undefined' && (window as any).google?.maps?.places) return (window as any).google;
+      await new Promise<void>((resolve, reject) => {
+        const id = 'gmaps-places-loader';
+        const existing = document.getElementById(id) as HTMLScriptElement | null;
+        if (existing) {
+          existing.addEventListener('load', () => resolve());
+          existing.addEventListener('error', () => reject(new Error('gmaps load error')));
+          return;
+        }
+        const s = document.createElement('script');
+        s.id = id;
+        s.async = true;
+        s.defer = true;
+        const key = (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string) || 'AIzaSyBsiXduDa2PIqnkMnaqUnvuBBGroPy2dnM';
+        s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=quarterly&libraries=places`;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('gmaps load error'));
+        document.head.appendChild(s);
+      });
+      return (window as any).google;
+    };
     const run = async () => {
+      let g: any | null = null;
+      try { g = await loadGoogle(); } catch {}
+      let svc: any | null = null;
+      if (g && g.maps?.places) {
+        try { svc = new g.maps.places.PlacesService(document.createElement('div')); } catch {}
+      }
       for (const b of businesses) {
         const id = b?.business_id || b?.id || b?.name;
         if (!id || resolvedAddresses[id]) continue;
         const street = getStreetAddress(b);
         const looksMissing = !(typeof street === 'string' && /\d/.test(street));
-        if (!looksMissing) continue;
+        if (!looksMissing && !svc) continue; // already adequate
         const cityLine = getCityStateZip(b) || searchTerm;
         const q = [b?.name, cityLine].filter(Boolean).join(' ');
-        try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(q)}`;
-          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          const data = await resp.json();
-          if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
-            const addr = data[0].address as any;
-            const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
-            if (line1 && /\d/.test(line1)) {
-              setResolvedAddresses(prev => ({ ...prev, [id]: line1 }));
+        let resolvedLine: string | null = null;
+        // First try Google Places (authoritative)
+        if (svc) {
+          try {
+            await new Promise<void>((resolve) => {
+              svc.textSearch({ query: q }, (results: any[], status: string) => {
+                try {
+                  if (Array.isArray(results) && results.length > 0) {
+                    const r0 = results[0];
+                    const fa = r0?.formatted_address as string | undefined;
+                    if (typeof fa === 'string' && fa.includes(',')) {
+                      const first = fa.split(',')[0]?.trim();
+                      if (first && /\d/.test(first)) resolvedLine = first;
+                    }
+                  }
+                } finally { resolve(); }
+              });
+            });
+          } catch {}
+        }
+        // Fallback to Nominatim if Places not available
+        if (!resolvedLine) {
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&accept-language=en-US&q=${encodeURIComponent(q)}&email=okapiq-support@okapiq.com`;
+            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await resp.json();
+            if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
+              const addr = data[0].address as any;
+              const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
+              if (line1 && /\d/.test(line1)) {
+                resolvedLine = line1;
+              }
             }
-          }
-        } catch {}
+          } catch {}
+        }
+        if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
+        // Nominatim usage policy: throttle requests
+        await new Promise(res => setTimeout(res, 600));
       }
     };
     run();
@@ -644,9 +697,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                         <div className="space-y-4">
                           <div className="flex items-start justify-between">
                             <div className="space-y-1">
-                              <h3 className="text-lg font-semibold text-okapi-brown-900">{business.name || 'Unknown Business'}</h3>
                               <div className="text-sm text-okapi-brown-600">
-                                <div>{resolvedAddresses[business?.business_id || business?.id || business?.name] || getStreetAddress(business)}</div>
+                                <div>{(resolvedAddresses[business?.business_id || business?.id || business?.name] || getStreetAddress(business))}</div>
                                 <div className="flex gap-4">
                                   <span>{getCityStateZip(business)}</span>
                                   <span>{business?.contact?.phone || business.phone || 'Phone not available'}</span>

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
 import dynamic from 'next/dynamic';
 
-const InteractiveMap = dynamic(() => import('./interactive-map'), { ssr: false });
+const InteractiveMap = dynamic(() => import('./interactive-map-google'), { ssr: false });
 import { US_CRIME_HEAT_POINTS, US_CENTER } from '@/components/../lib/crimeHeat';
 
 const navLinks = [

@@ -1089,17 +1089,6 @@ class GoogleSerpAgent:
         query = request.search_params.get("q") or request.search_params.get("query")
         location = request.search_params.get("location")
 
-        if not api_key:
-            # No API key; return empty with message so pipeline can continue
-            return CrawlResult(
-                success=False,
-                data=[],
-                metadata={"note": "SERPAPI_KEY not set"},
-                timestamp=datetime.now(),
-                source="google_serp",
-                errors=["SERPAPI_KEY not set"]
-            )
-
         try:
             # Prefer Google Places via SerpAPI; fallback to Google Local
             # Craft a business-intent query for better local results
@@ -1108,53 +1097,58 @@ class GoogleSerpAgent:
             base_loc = location or request.search_params.get("location") or "United States"
             # Geocode to lat/lng for strong locality bias
             ll_param = None
+            lat = None
+            lng = None
             try:
                 lat_lng = await self._geocode_location(base_loc)
                 if lat_lng and isinstance(lat_lng, tuple) and all(isinstance(v, (int, float)) for v in lat_lng):
-                    ll_param = f"@{lat_lng[0]},{lat_lng[1]},12z"
+                    lat, lng = lat_lng
+                    ll_param = f"@{lat},{lng},12z"
             except Exception as ge:
                 self.logger.warning(f"Geocoding failed for '{base_loc}': {ge}")
-            params_places = {
-                "engine": "google_places",
-                "q": search_q,
-                "type": q_industry.replace(" ", "_") or "establishment",
-                "location": base_loc,
-                "hl": "en",
-                "gl": "us",
-                "api_key": api_key,
-                "num": 20,
-            }
-            params_local = {
-                "engine": "google_local",
-                "q": search_q,
-                "location": base_loc,
-                "hl": "en",
-                "gl": "us",
-                "api_key": api_key,
-                "num": 20,
-            }
-            if ll_param:
-                params_places["ll"] = ll_param
-                params_local["ll"] = ll_param
+            data = {}
+            if api_key:
+                params_places = {
+                    "engine": "google_places",
+                    "q": search_q,
+                    "type": q_industry.replace(" ", "_") or "establishment",
+                    "location": base_loc,
+                    "hl": "en",
+                    "gl": "us",
+                    "api_key": api_key,
+                    "num": 20,
+                }
+                params_local = {
+                    "engine": "google_local",
+                    "q": search_q,
+                    "location": base_loc,
+                    "hl": "en",
+                    "gl": "us",
+                    "api_key": api_key,
+                    "num": 20,
+                }
+                if ll_param:
+                    params_places["ll"] = ll_param
+                    params_local["ll"] = ll_param
 
-            async with aiohttp.ClientSession() as session:
-                # Try Places
-                async with session.get("https://serpapi.com/search.json", params=params_places) as resp:
-                    txt = await resp.text()
-                try:
-                    data = json.loads(txt)
-                except Exception:
-                    self.logger.error(f"SERPAPI non-JSON response (places): {txt[:200]}")
-                    data = {}
-                # If Places empty, try Local
-                if not data or not (data.get("results") or data.get("local_results") or data.get("place_results")):
-                    async with session.get("https://serpapi.com/search.json", params=params_local) as resp2:
-                        txt2 = await resp2.text()
+                async with aiohttp.ClientSession() as session:
+                    # Try Places
+                    async with session.get("https://serpapi.com/search.json", params=params_places) as resp:
+                        txt = await resp.text()
                     try:
-                        data = json.loads(txt2)
+                        data = json.loads(txt)
                     except Exception:
-                        self.logger.error(f"SERPAPI non-JSON response (local): {txt2[:200]}")
+                        self.logger.error(f"SERPAPI non-JSON response (places): {txt[:200]}")
                         data = {}
+                    # If Places empty, try Local
+                    if not data or not (data.get("results") or data.get("local_results") or data.get("place_results")):
+                        async with session.get("https://serpapi.com/search.json", params=params_local) as resp2:
+                            txt2 = await resp2.text()
+                        try:
+                            data = json.loads(txt2)
+                        except Exception:
+                            self.logger.error(f"SERPAPI non-JSON response (local): {txt2[:200]}")
+                            data = {}
 
             results = []
             places = data.get("results") or []
@@ -1221,10 +1215,10 @@ class GoogleSerpAgent:
             if not results:
                 try:
                     # Ensure we have lat/lng
-                    if not (lat is not None and lng is not None):
-                        ll = await self._geocode_location(base_loc)
-                        if ll:
-                            lat, lng = ll
+                    if lat is None or lng is None:
+                        ll2 = await self._geocode_location(base_loc)
+                        if ll2:
+                            lat, lng = ll2
                     if lat is not None and lng is not None:
                         osm_items = await self._overpass_fallback(lat, lng, q_industry)
                         results.extend(osm_items)

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
 from pydantic import BaseModel, Field
 from app.core.database import get_db
 from app.models.buy_box import BuyBox
@@ -86,8 +87,8 @@ class BuyBoxResponse(BaseModel):
     contact_phones: Optional[List[str]]
     contact_notes: Optional[str]
     is_active: bool
-    created_at: str
-    updated_at: Optional[str]
+    created_at: datetime
+    updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True
