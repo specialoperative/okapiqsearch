@@ -304,7 +304,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     return '';
   };
 
-  // Opportunistically resolve missing street lines via Nominatim using business name + city
+  // Opportunistically resolve missing street lines and website via Google Places first, then Nominatim
   useEffect(() => {
     const businesses: any[] = Array.isArray(scanResults?.businesses) ? scanResults.businesses : [];
     if (!businesses.length) return;
@@ -347,11 +347,14 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         const cityLine = getCityStateZip(b) || searchTerm;
         const q = [b?.name, cityLine].filter(Boolean).join(' ');
         let resolvedLine: string | null = null;
+        let resolvedSite: string | null = null;
         // First try Google Places (authoritative)
         if (svc) {
           try {
             await new Promise<void>((resolve) => {
-              svc.textSearch({ query: q }, (results: any[], status: string) => {
+              const req: any = { query: q };
+              if (b?.place_id) req.query = undefined, req.placeId = b.place_id; // prefer place_id if present
+              svc.textSearch(req, (results: any[], status: string) => {
                 try {
                   if (Array.isArray(results) && results.length > 0) {
                     const r0 = results[0];
@@ -359,6 +362,20 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                     if (typeof fa === 'string' && fa.includes(',')) {
                       const first = fa.split(',')[0]?.trim();
                       if (first && /\d/.test(first)) resolvedLine = first;
+                    }
+                    if (typeof r0?.website === 'string') resolvedSite = r0.website;
+                    // If website not present in textSearch payload, try a details lookup by place_id
+                    const pid = (b?.place_id || r0?.place_id);
+                    if (!resolvedSite && pid) {
+                      try {
+                        svc.getDetails({ placeId: pid, fields: ['website','formatted_address'] }, (dd: any, st: string) => {
+                          if (dd?.website) resolvedSite = dd.website;
+                          if (!resolvedLine && typeof dd?.formatted_address === 'string') {
+                            const first = dd.formatted_address.split(',')[0]?.trim();
+                            if (first && /\d/.test(first)) resolvedLine = first;
+                          }
+                        });
+                      } catch {}
                     }
                   }
                 } finally { resolve(); }
@@ -370,18 +387,34 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
         if (!resolvedLine) {
           try {
             const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&accept-language=en-US&q=${encodeURIComponent(q)}&email=okapiq-support@okapiq.com`;
-            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            const data = await resp.json();
-            if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
-              const addr = data[0].address as any;
-              const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
-              if (line1 && /\d/.test(line1)) {
+          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          const data = await resp.json();
+          if (Array.isArray(data) && data.length > 0 && data[0]?.address) {
+            const addr = data[0].address as any;
+            const line1 = `${addr.house_number ? addr.house_number + ' ' : ''}${addr.road || addr.street || ''}`.trim();
+            if (line1 && /\d/.test(line1)) {
                 resolvedLine = line1;
-              }
             }
-          } catch {}
+          }
+        } catch {}
         }
         if (resolvedLine) setResolvedAddresses(prev => ({ ...prev, [id]: resolvedLine! }));
+        if (resolvedSite && (!b?.contact?.website && !b?.website)) {
+          try {
+            // Patch scanResults in-place to surface the website in the card (optimistic UI)
+            setScanResults((prev:any)=>{
+              if (!prev?.businesses) return prev;
+              const copy = { ...prev, businesses: prev.businesses.map((x:any)=>{
+                if ((x?.business_id||x?.id||x?.name) === id) {
+                  const contact = { ...(x?.contact||{}), website: resolvedSite };
+                  return { ...x, contact, website: contact.website };
+                }
+                return x;
+              }) };
+              return copy;
+            });
+          } catch {}
+        }
         // Nominatim usage policy: throttle requests
         await new Promise(res => setTimeout(res, 600));
       }

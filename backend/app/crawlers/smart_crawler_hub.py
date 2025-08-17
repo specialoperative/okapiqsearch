@@ -1186,6 +1186,7 @@ class GoogleSerpAgent:
                 phone = item.get("international_phone_number") or item.get("phone_number") or item.get("phone")
                 website = item.get("website") or item.get("link") or item.get("local_result_link")
                 data_id = item.get("data_id") or item.get("place_id") or item.get("data_id")
+                place_id = item.get("place_id")
                 coords = None
                 try:
                     gc = item.get("gps_coordinates") or {}
@@ -1216,7 +1217,8 @@ class GoogleSerpAgent:
                     "owner_age_estimate": 45,
                     "coordinates": coords,
                     "source": "Google SERP via SerpAPI",
-                    "place_data_id": data_id
+                    "place_data_id": data_id,
+                    "place_id": place_id
                 }
                 # add flat email key to align across sources
                 item_out["email"] = None

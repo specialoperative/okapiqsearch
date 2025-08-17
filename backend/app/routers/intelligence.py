@@ -356,7 +356,8 @@ async def comprehensive_market_scan(
                                 'rating': item.get('rating') or 0.0,
                                 'reviews': item.get('review_count') or item.get('reviews') or 0,
                                 'coordinates': item.get('coordinates'),
-                                'source': item.get('source') or crawl_res.source
+                                'source': item.get('source') or crawl_res.source,
+                                'place_id': item.get('place_id') or item.get('place_data_id')
                             })
                 except Exception as e:
                     logger.warning(f"SERP search failed for '{query}': {e}")
