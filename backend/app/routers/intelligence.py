@@ -642,22 +642,54 @@ async def comprehensive_market_scan(
                 return city, state, zip_code
             except Exception:
                 return None, None, None
+        
+        async def _find_business_website(business_name: str, city: str = None):
+            """Attempt to find a business website using Google search"""
+            try:
+                from ..crawlers.smart_crawler_hub import CrawlerType, CrawlRequest
+                query = f'"{business_name}"'
+                if city:
+                    query += f" {city}"
+                query += " official website"
+                
+                crawl_req = CrawlRequest(
+                    crawler_type=CrawlerType.GOOGLE_SERP,
+                    target_url="https://serpapi.com/search.json",
+                    search_params={
+                        "query": query,
+                        "location": city or request.location
+                    },
+                    priority=1
+                )
+                crawl_res = await crawler_hub._execute_crawl(crawl_req)
+                if crawl_res and crawl_res.success and crawl_res.data:
+                    for item in crawl_res.data[:3]:  # Check first 3 results
+                        site = item.get('website')
+                        if site and isinstance(site, str) and site.strip():
+                            return site.strip()
+                return None
+            except Exception:
+                return None
 
         for i, biz in enumerate(sample_businesses):  # Process sample businesses
             try:
                 # Quick normalization without heavy processing
                 formatted_addr = biz.get('address', '')
                 city_p, state_p, zip_p = _parse_city_state_zip(formatted_addr)
-                def _street_line(addr: str):
+                
+                # Website discovery if missing
+                website = biz.get('website', '')
+                if not website or website == 'N/A':
                     try:
-                        first = (addr or '').split(',')[0].strip()
-                        import re
-                        if re.search(r"\d{1,6}\s+.+", first) or re.search(r"(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)", first, re.I):
-                            return first
-                        return None
+                        found_website = await _find_business_website(
+                            biz.get('name', ''), 
+                            city_p or request.location
+                        )
+                        if found_website:
+                            website = found_website
                     except Exception:
-                        return None
-                line1_val = _street_line(formatted_addr)
+                        pass
+                
                 normalized = {
                     'business_id': f"raw_{i}_{hash(str(biz))}",
                     'name': biz.get('name', 'Unknown Business'),
@@ -665,7 +697,7 @@ async def comprehensive_market_scan(
                     'industry': biz.get('industry', request.industry or 'hvac'),
                     'address': {
                         'formatted_address': formatted_addr,
-                        'line1': line1_val,
+                        'line1': formatted_addr.split(',')[0].strip() if formatted_addr else None,
                         'city': city_p or request.location,
                         'state': state_p or 'CA',
                         'zip_code': zip_p,
@@ -674,10 +706,10 @@ async def comprehensive_market_scan(
                     'contact': {
                         'phone': biz.get('phone', ''),
                         'email': None,
-                        'website': biz.get('website', ''),
+                        'website': website,
                         'phone_valid': bool(biz.get('phone')),
                         'email_valid': False,
-                        'website_valid': bool(biz.get('website'))
+                        'website_valid': bool(website)
                     },
                     'metrics': {
                         'rating': biz.get('rating', 0.0),

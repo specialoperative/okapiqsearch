@@ -242,8 +242,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
 
   // Display the best-available street line. Prefer explicit street fields; otherwise parse from formatted text.
   const getStreetAddress = (b: any): string => {
-    const looksStreet = (s: string) => /\d{1,6}\s+.+/.test(s) || /(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)/i.test(s);
-    // 1) Common field variants (accept only if looks like a street)
+    // 1) Common field variants
     const candidates = [
       b?.address?.line1,
       b?.address_line1,
@@ -258,17 +257,14 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
       typeof b?.address === 'string' ? b.address : undefined
     ];
     for (const c of candidates) {
-      if (typeof c === 'string') {
-        const trimmed = c.trim();
-        if (trimmed && looksStreet(trimmed)) return trimmed;
-      }
+      if (typeof c === 'string' && c.trim()) return c.trim();
     }
     // 2) Parse from formatted strings
     const formatted = b?.address_formatted || b?.address?.formatted_address || b?.formatted_address || b?.location?.address || '';
     if (typeof formatted === 'string' && formatted.trim()) {
       // If the first comma-separated segment looks like a street (contains a number), use it
       const first = formatted.split(',')[0]?.trim() || '';
-      const looksLikeStreet = looksStreet(first);
+      const looksLikeStreet = /\d{1,6}\s+.+/.test(first) || /(street|st\b|avenue|ave\b|road|rd\b|boulevard|blvd\b|drive|dr\b|court|ct\b|lane|ln\b|way\b|place|pl\b)/i.test(first);
       if (looksLikeStreet) return first;
       // Otherwise, search anywhere in the string for a street-like pattern
       const m = formatted.match(/\d{1,6}\s+[^,]+?(?:\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Court|Ct|Lane|Ln|Way|Place|Pl))\b/i);
@@ -715,7 +711,12 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Business Type</span><span className="text-okapi-brown-900 font-medium">{business?.business_type || business?.category || 'N/A'}</span></div>
-                            <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(() => { const s = business?.contact?.website || business?.website; if (!s) return (<span className="text-okapi-brown-900 font-medium">N/A</span>); const url = /^https?:\/\//i.test(s) ? s : `https://${s}`; return (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={url} target="_blank" rel="noopener noreferrer">{s}</a>); })()}</div>
+                            <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(() => { 
+                              const site = business?.contact?.website || business?.website; 
+                              if (!site) return (<span className="text-okapi-brown-900 font-medium">N/A</span>); 
+                              const url = site.startsWith('http') ? site : `https://${site}`; 
+                              return (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={url} target="_blank" rel="noopener noreferrer">{site}</a>); 
+                            })()}</div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Gmap rating</span><span className="text-okapi-brown-900 font-medium">{business?.gmap_rating ?? business?.metrics?.rating ?? 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Min Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.min_revenue ? `$${(business.computed.min_revenue).toLocaleString()}` : 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Max Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.max_revenue ? `$${(business.computed.max_revenue).toLocaleString()}` : 'N/A'}</span></div>
