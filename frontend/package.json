@@ -15,6 +15,7 @@
     "@heroicons/react": "2.0.18",
     "@hookform/resolvers": "3.3.2",
     "@radix-ui/react-slot": "^1.2.3",
+    "@swc/helpers": "^0.5.17",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-table": "8.10.7",

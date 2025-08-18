@@ -5,7 +5,7 @@ import { Search, ArrowRight, CheckCircle2 } from "lucide-react";
 import dynamic from 'next/dynamic';
 
 const InteractiveMap = dynamic(() => import('./interactive-map-google'), { ssr: false });
-import { US_CRIME_HEAT_POINTS, US_CENTER } from '@/components/../lib/crimeHeat';
+import { US_CRIME_HEAT_POINTS, US_CENTER } from '@/lib/crimeHeat';
 
 const navLinks = [
   { name: "How it Works", page: "how-it-works" },

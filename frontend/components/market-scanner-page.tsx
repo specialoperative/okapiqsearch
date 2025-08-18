@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { US_CRIME_HEAT_POINTS } from '@/components/../lib/crimeHeat';
+import { US_CRIME_HEAT_POINTS } from '@/lib/crimeHeat';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Search, TrendingUp, Users, Building2, Target, Zap, BarChart3, Filter, MapPin, DollarSign, Calendar, Star, Phone, Mail, ExternalLink, AlertCircle, CheckCircle, Map, Globe, Database, Shield, Activity, Menu } from 'lucide-react';
 // Avoid SSR importing of Leaflet by dynamically loading the map component on the client only
