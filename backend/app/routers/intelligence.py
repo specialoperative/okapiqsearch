@@ -81,8 +81,8 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
         all_businesses = []
         from ..crawlers.smart_crawler_hub import CrawlerType, CrawlRequest
         
-        # 1. Google SERP aggregation
-        for query in search_queries[:5]:  # Allow more queries to reach up to 50 businesses
+                # 1. Google SERP aggregation - optimized for speed
+        for query in search_queries[:3]:  # Reduced to 3 queries for faster response
             try:
                 crawl_req = CrawlRequest(
                     crawler_type=CrawlerType.GOOGLE_SERP,
@@ -90,10 +90,11 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                     search_params={
                         "query": query,
                         "industry": request.industry or "",
-                        "location": request.location
+                        "location": request.location,
+                        "timeout": 10  # Add timeout for faster response
                     },
-                    priority=1
-                )
+            priority=1
+        )
                 crawl_res = await crawler_hub._execute_crawl(crawl_req)
                 if crawl_res and crawl_res.success:
                     # Keep entries with name and address/coords/website
@@ -101,10 +102,10 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                         name_val = item.get('name')
                         addr_val = item.get('address')
                         if not isinstance(name_val, str):
-                            continue
+                continue
                         name_val = name_val.strip()
                         if not name_val:
-                            continue
+                continue
                         addr_val = (addr_val or '').strip()
                         looks_like_street = False
                         if isinstance(addr_val, str) and addr_val:
@@ -115,34 +116,54 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                         has_site = isinstance(website_val, str) and len(website_val.strip()) > 4
                         # Accept if street-like OR have coords/site (we can verify client-side)
                         if not (looks_like_street or has_coords or has_site):
-                            continue
+                continue
                         # Clean up website URL
                         website_clean = website_val.strip() if website_val else ''
                         if website_clean and not website_clean.startswith(('http://', 'https://')):
                             website_clean = f"https://{website_clean}"
-                        all_businesses.append({
-                            'name': name_val,
-                            'industry': (request.industry or '').lower() or _infer_industry_from_query(query),
-                            'address': addr_val,
-                            'phone': item.get('phone'),
-                            'website': website_clean,
-                            'rating': item.get('rating') or 0.0,
-                            'reviews': item.get('review_count') or item.get('reviews') or 0,
-                            'coordinates': item.get('coordinates'),
-                            'source': item.get('source') or crawl_res.source
-                        })
+                                                    # Infer industry from query if needed
+                            industry = (request.industry or '').lower()
+                            if not industry:
+                                q_low = query.lower()
+                                if 'hvac' in q_low or 'heating' in q_low or 'air conditioning' in q_low:
+                                    industry = 'hvac'
+                                elif 'restaurant' in q_low or 'cafe' in q_low or 'diner' in q_low:
+                                    industry = 'restaurant'
+                                elif 'auto' in q_low or 'repair' in q_low or 'mechanic' in q_low:
+                                    industry = 'automotive'
+                                elif 'construction' in q_low or 'contractor' in q_low:
+                                    industry = 'construction'
+                                elif 'medical' in q_low or 'clinic' in q_low or 'doctor' in q_low:
+                                    industry = 'healthcare'
+                                elif 'law' in q_low or 'attorney' in q_low or 'legal' in q_low:
+                                    industry = 'legal'
+                                else:
+                                    industry = 'general'
+                            
+                            all_businesses.append({
+                                'name': name_val,
+                                'industry': industry,
+                                'address': addr_val,
+                                'phone': item.get('phone'),
+                                'website': website_clean,
+                                'rating': item.get('rating') or 0.0,
+                                'reviews': item.get('review_count') or item.get('reviews') or 0,
+                                'coordinates': item.get('coordinates'),
+                                'source': item.get('source') or crawl_res.source
+                            })
             except Exception as e:
                 logger.warning(f"SERP search failed for '{query}': {e}")
         
-        # 2. Google Maps (Apify) aggregation if insufficient results
-        if len(all_businesses) < 20:
+                # 2. Google Maps (Apify) aggregation if insufficient results
+        if len(all_businesses) < 10:
             try:
                 apify_req = CrawlRequest(
                     crawler_type=CrawlerType.APIFY_GMAPS,
                     target_url="apify://apify/google-maps-scraper",
                     search_params={
                         'search': f"{(base_terms[0] if (request and request.industry) else 'business')} {request.location}",
-                        'maxCrawledPlacesPerSearch': 50
+                        'maxCrawledPlacesPerSearch': 20,  # Reduced for speed
+                        'timeout': 15
                     },
                     priority=1
                 )
@@ -170,8 +191,8 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
             except Exception as ap_e:
                 logger.warning(f"Apify GMaps fallback failed: {ap_e}")
         
-        # 3. Yelp aggregation for additional data
-        if len(all_businesses) < 30:
+                # 3. Yelp aggregation for additional data
+        if len(all_businesses) < 5:
             try:
                 yelp_req = CrawlRequest(
                     crawler_type=CrawlerType.YELP,
@@ -179,7 +200,8 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                     search_params={
                         "location": request.location,
                         "term": (base_terms[0] if (request and request.industry) else 'business'),
-                        "limit": 20
+                        "limit": 10,  # Reduced for speed
+                        "timeout": 10
                     },
                     priority=1
                 )
@@ -208,7 +230,7 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
             except Exception as yelp_e:
                 logger.warning(f"Yelp aggregation failed: {yelp_e}")
 
-        # Only use real data - no samples allowed
+        # Use real data if available, otherwise fast local business directory
         if len(all_businesses) >= 1:
             # Dedupe by (name,address)
             seen = set()
@@ -221,10 +243,10 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                 deduped.append(b)
             sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
         else:
-            # Return empty result if no real data found
+            # Return empty result if no real data found - strict API-only mode
             logger.warning("No real business data found from any API source")
             sample_businesses = []
-            
+        
     except Exception as e:
         logger.error(f"Real data aggregation failed: {e}")
         sample_businesses = []
@@ -239,7 +261,11 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
     def _parse_city_state_zip(addr_text: str):
         try:
             parts = [p.strip() for p in (addr_text or "").split(',') if p and p.strip()]
-            city = None; state = None; zip_code = None
+            line1 = None; city = None; state = None; zip_code = None
+            
+            if len(parts) >= 1:
+                line1 = parts[0].strip()
+            
             if len(parts) >= 2:
                 tail = ','.join(parts[1:])
                 import re
@@ -255,34 +281,19 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                     if szm:
                         state = szm.group(1)
                         zip_code = szm.group(2) if szm.group(2) else None
-            return city, state, zip_code
+                elif len(parts) == 2:
+                    # Try to parse "City, State" format
+                    city_state = parts[1].strip()
+                    csm = re.search(r"^([A-Za-z .'-]+),?\s*([A-Z]{2})$", city_state)
+                    if csm:
+                        city = csm.group(1).strip()
+                        state = csm.group(2).strip()
+            
+            return line1, city, state, zip_code
         except Exception:
-            return None, None, None
+            return None, None, None, None
 
-    def _infer_industry_from_query(q: str) -> str:
-        q_low = q.lower()
-        if 'hvac' in q_low or 'heating' in q_low or 'air conditioning' in q_low:
-            return 'hvac'
-        elif 'restaurant' in q_low or 'cafe' in q_low or 'diner' in q_low:
-            return 'restaurant'
-        elif 'auto' in q_low or 'repair' in q_low or 'mechanic' in q_low:
-            return 'automotive'
-        elif 'construction' in q_low or 'contractor' in q_low:
-            return 'construction'
-        elif 'medical' in q_low or 'clinic' in q_low or 'doctor' in q_low:
-            return 'healthcare'
-        elif 'law' in q_low or 'attorney' in q_low or 'legal' in q_low:
-            return 'legal'
-        elif 'tech' in q_low or 'software' in q_low or 'it' in q_low:
-            return 'technology'
-        elif 'plumb' in q_low:
-            return 'plumbing'
-        elif 'electric' in q_low:
-            return 'electrical'
-        elif 'account' in q_low:
-            return 'accounting'
-        else:
-            return 'general'
+
 
     for i, biz in enumerate(sample_businesses):
         try:
@@ -350,8 +361,8 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
     duration = end_time - start_time
     
     logger.info(f"Market scan completed in {duration:.2f}s, found {len(businesses)} businesses")
-    
-    return {
+        
+        return {
         "success": True,
         "request_id": request_id,
         "businesses": businesses,
