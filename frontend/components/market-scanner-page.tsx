@@ -672,25 +672,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
 
               {/* List View */}
               {viewMode === 'list' && (
-                <>
-                  {(!scanResults.businesses || scanResults.businesses.length === 0) ? (
-                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                      <div className="w-16 h-16 rounded-full bg-okapi-brown-100 flex items-center justify-center">
-                        <Search className="w-8 h-8 text-okapi-brown-500" />
-                      </div>
-                      <div className="text-center">
-                        <h3 className="text-lg font-semibold text-okapi-brown-900 mb-2">No Businesses Found</h3>
-                        <p className="text-okapi-brown-600 mb-4">No real business data found for your search criteria. Try:</p>
-                        <ul className="text-sm text-okapi-brown-500 space-y-1">
-                          <li>• Expanding to a larger city or region</li>
-                          <li>• Selecting "All Industries" for broader results</li>
-                          <li>• Checking if API keys are properly configured</li>
-                        </ul>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {(scanResults.businesses || []).map((business: any, index: number) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(scanResults.businesses || []).map((business: any, index: number) => (
                     <motion.div
                       key={`${business.name}-${index}`}
                       initial={{ opacity: 0, y: 20 }}
@@ -730,16 +713,16 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Business Type</span><span className="text-okapi-brown-900 font-medium">{business?.business_type || business?.category || 'N/A'}</span></div>
                                                          <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Website</span>{(()=>{const w = (business?.contact?.website || business?.website || '').trim(); if (!w || w === 'N/A') return (<span className="text-okapi-brown-900 font-medium">N/A</span>); const href = w.startsWith('http') ? w : `https://${w}`; const display = w.replace(/^https?:\/\//i, '').replace(/^www\./i, ''); return (<a className="text-okapi-brown-900 font-medium truncate max-w-[60%]" href={href} target="_blank" rel="noopener noreferrer">{display}</a>); })()}</div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Gmap rating</span><span className="text-okapi-brown-900 font-medium">{business?.gmap_rating ?? business?.metrics?.rating ?? 'N/A'}</span></div>
-                            <div className="flex justify-between"><span className="text-okapi-brown-500">Min Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.min_revenue ? `$${(business.computed.min_revenue).toLocaleString()}` : 'N/A'}</span></div>
-                            <div className="flex justify-between"><span className="text-okapi-brown-500">Max Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.max_revenue ? `$${(business.computed.max_revenue).toLocaleString()}` : 'N/A'}</span></div>
-                            <div className="flex justify-between"><span className="text-okapi-brown-500">Owner Age</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.owner_age ?? 'N/A'}</span></div>
+                            <div className="flex justify-between"><span className="text-okapi-brown-500">Min Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.metrics?.min_revenue ? `$${(business.metrics.min_revenue).toLocaleString()}` : 'N/A'}</span></div>
+                            <div className="flex justify-between"><span className="text-okapi-brown-500">Max Revenue</span><span className="text-okapi-brown-900 font-medium">{business?.metrics?.max_revenue ? `$${(business.metrics.max_revenue).toLocaleString()}` : 'N/A'}</span></div>
+                            <div className="flex justify-between"><span className="text-okapi-brown-500">Owner Age</span><span className="text-okapi-brown-900 font-medium">{business?.metrics?.owner_age ?? 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Business phone</span><span className="text-okapi-brown-900 font-medium">{business?.contact?.phone || business?.phone || 'N/A'}</span></div>
                             <div className="flex justify-between truncate"><span className="text-okapi-brown-500">Business email</span><span className="text-okapi-brown-900 font-medium truncate max-w-[60%]">{business?.contact?.email || business?.email || 'N/A'}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">City</span><span className="text-okapi-brown-900 font-medium">{business?.address?.city || ''}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">State</span><span className="text-okapi-brown-900 font-medium">{business?.address?.state || ''}</span></div>
                             <div className="flex justify-between"><span className="text-okapi-brown-500">Zip Code</span><span className="text-okapi-brown-900 font-medium">{business?.address?.zip_code || ''}</span></div>
-                            <div className="flex justify-between"><span className="text-okapi-brown-500"># Locations</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.num_locations ?? 1}</span></div>
-                            <div className="flex justify-between"><span className="text-okapi-brown-500">Source</span><span className="text-okapi-brown-900 font-medium">{business?.computed?.source || business?.source || (Array.isArray(business?.data_sources) ? business.data_sources.join(', ') : 'N/A')}</span></div>
+                            <div className="flex justify-between"><span className="text-okapi-brown-500"># Locations</span><span className="text-okapi-brown-900 font-medium">{business?.metrics?.num_locations ?? 1}</span></div>
+                            <div className="flex justify-between"><span className="text-okapi-brown-500">Source</span><span className="text-okapi-brown-900 font-medium">{business?.data_sources?.join(', ') || business?.source || 'N/A'}</span></div>
                           </div>
                           <div className="flex items-center justify-between pt-3 border-t border-okapi-brown-100">
                             <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskColor(business?.analysis?.succession_risk?.risk_score ?? business.succession_risk_score)}`}>{getRiskLevel(business?.analysis?.succession_risk?.risk_score ?? business.succession_risk_score)}</span>
@@ -751,10 +734,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
                         </div>
                       </div>
                     </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </>
+                  ))}
+                </div>
               )}
             </motion.div>
           )}

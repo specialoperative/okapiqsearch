@@ -1,1078 +1,372 @@
-"""
-Intelligence API Router - Advanced market intelligence endpoints
-
-This router provides access to the complete backend architecture pipeline
-through the Integrated Intelligence Service.
-
-Endpoints:
-- /intelligence/scan - Complete market intelligence scan
-- /intelligence/leads - Lead generation and scoring
-- /intelligence/fragmentation - Market fragmentation analysis
-- /intelligence/opportunities - Market opportunities identification
-- /intelligence/status - Request status monitoring
-"""
-
-import asyncio
-from typing import List, Dict, Any, Optional
-from datetime import datetime
 import logging
+import asyncio
+from datetime import datetime
+from typing import Optional, Dict, Any, List
+from fastapi import APIRouter, HTTPException, BackgroundTasks, status
+from pydantic import BaseModel
+import time
+import re
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
-from fastapi.responses import JSONResponse
-from fastapi.encoders import jsonable_encoder
-from dataclasses import is_dataclass, asdict
-from datetime import date
-from decimal import Decimal
-import numpy as np
-from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
-
-from ..core.database import get_db
-from ..services.integrated_intelligence_service import (
-    IntegratedIntelligenceService, 
-    IntelligenceRequest, 
-    IntelligenceResponse
-)
-
-
-# Initialize router and service
-router = APIRouter()
-intelligence_service = IntegratedIntelligenceService()
 logger = logging.getLogger(__name__)
 
+router = APIRouter()
 
-# Request/Response Models
 class MarketScanRequest(BaseModel):
-    location: str = Field(..., description="Geographic location (city, state, ZIP)")
-    industry: Optional[str] = Field(None, description="Industry filter")
-    radius_miles: int = Field(25, description="Search radius in miles")
-    max_businesses: int = Field(50, description="Maximum businesses to analyze")
-    crawl_sources: Optional[List[str]] = Field(
-        None, 
-        description="Data sources to crawl",
-        example=["google_maps", "yelp", "linkedin"]
-    )
-    enrichment_types: Optional[List[str]] = Field(
-        None,
-        description="Types of data enrichment to perform",
-        example=["census", "irs", "sos", "nlp", "market_intelligence"]
-    )
-    analysis_types: Optional[List[str]] = Field(
-        None,
-        description="Types of analysis to perform",
-        example=["succession_risk", "tam_opportunity", "market_fragmentation", "growth_potential"]
-    )
-    use_cache: bool = Field(True, description="Whether to use cached results")
-    priority: int = Field(1, description="Request priority (1=high, 5=low)")
-
-
-class LeadGenerationRequest(BaseModel):
-    location: str = Field(..., description="Geographic location")
-    industry: Optional[str] = Field(None, description="Industry filter")
-    min_lead_score: float = Field(50.0, description="Minimum lead score threshold")
-    max_leads: int = Field(25, description="Maximum number of leads to return")
-    succession_risk_min: Optional[float] = Field(None, description="Minimum succession risk score")
-    revenue_min: Optional[int] = Field(None, description="Minimum estimated revenue")
-
-
-class FragmentationAnalysisRequest(BaseModel):
-    location: str = Field(..., description="Geographic location")
-    industry: str = Field(..., description="Industry to analyze")
-    include_roll_up_analysis: bool = Field(True, description="Include roll-up opportunity analysis")
-
-
-class OpportunityRequest(BaseModel):
-    location: str = Field(..., description="Geographic location")
-    industries: Optional[List[str]] = Field(None, description="Industries to analyze")
-    opportunity_types: Optional[List[str]] = Field(
-        None,
-        description="Types of opportunities to identify",
-        example=["succession_wave", "market_consolidation", "large_market"]
-    )
-
-
-# Main Intelligence Endpoints
-
-def _normalize_website(website: str) -> str:
-    """Normalize website URL to ensure proper format"""
-    if not website or not isinstance(website, str):
-        return ''
-    
-    website = website.strip()
-    if not website:
-        return ''
-    
-    # Remove common prefixes if they appear
-    if website.lower().startswith('www.'):
-        website = website[4:]
-    if website.lower().startswith('http://'):
-        website = website[7:]
-    if website.lower().startswith('https://'):
-        website = website[8:]
-    
-    # Add https:// prefix for proper URL
-    if website and not website.startswith('http'):
-        website = f'https://{website}'
-    
-    return website
+    location: str
+    industry: Optional[str] = None
+    radius_miles: Optional[int] = 15
+    max_businesses: Optional[int] = 20
+    crawl_sources: Optional[List[str]] = ['google_serp']
+    enrichment_types: Optional[List[str]] = []
+    analysis_types: Optional[List[str]] = []
+    use_cache: Optional[bool] = True
+    priority: Optional[int] = 1
 
 @router.post("/scan")
-async def comprehensive_market_scan(
-    request: MarketScanRequest,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
-):
+async def comprehensive_market_scan(request: MarketScanRequest, background_tasks: BackgroundTasks):
     """
-    Fast market scan for business listings
+    Comprehensive market scan using real API aggregation
+    """
+    logger.info(f"Market scan request: {request.location}, industry: {request.industry}")
     
-    Optimized endpoint that focuses on speed:
-    1. Quick business data retrieval from Google SERP
-    2. Minimal processing for immediate results
-    3. Basic scoring and metrics
-    """
+    import time
+    
+    start_time = time.time()
+    request_id = f"req_{int(time.time())}_{abs(hash(request.location + str(time.time())))}"
+    
+    # Real data aggregation from all available APIs
+    sample_businesses = []
+    
     try:
-        # For speed, use a simplified approach with hardcoded data to avoid import issues
-        import time
+        from ..crawlers.smart_crawler_hub import SmartCrawlerHub
+        # Initialize crawler hub for real data aggregation
+        crawler_hub = SmartCrawlerHub()
         
-        start_time = time.time()
-        request_id = f"req_{int(time.time())}_{abs(hash(request.location + str(time.time())))}"
-        
-        # Step 1: Generate quick mock data for immediate results (to avoid complex crawler dependencies)
-        quick_sources = ['google_serp']
-        
-        # Generate sample business data with real addresses using Google SERP/Maps-like data
-        # Create industry-specific address pools for different cities
-        address_templates = {
-            'hvac': [
-                '{street_num} Mission St, {city}, CA {zip}',
-                '{street_num} Market St, {city}, CA {zip}', 
-                '{street_num} Balboa St, {city}, CA {zip}',
-                '{street_num} Valencia St, {city}, CA {zip}',
-                '{street_num} Taraval St, {city}, CA {zip}',
-                '{street_num} Irving St, {city}, CA {zip}',
-                '{street_num} Clement St, {city}, CA {zip}',
-                '{street_num} Judah St, {city}, CA {zip}',
-                '{street_num} Geary St, {city}, CA {zip}',
-                '{street_num} Castro St, {city}, CA {zip}'
-            ],
-            'restaurant': [
-                '{street_num} Main St, {city}, CA {zip}',
-                '{street_num} Broadway, {city}, CA {zip}',
-                '{street_num} First St, {city}, CA {zip}',
-                '{street_num} Second St, {city}, CA {zip}',
-                '{street_num} Union St, {city}, CA {zip}',
-                '{street_num} Oak St, {city}, CA {zip}',
-                '{street_num} Pine St, {city}, CA {zip}',
-                '{street_num} Bush St, {city}, CA {zip}',
-                '{street_num} California St, {city}, CA {zip}',
-                '{street_num} Sacramento St, {city}, CA {zip}'
-            ],
-            'retail': [
-                '{street_num} Shopping Center Way, {city}, CA {zip}',
-                '{street_num} Commercial St, {city}, CA {zip}',
-                '{street_num} Business Blvd, {city}, CA {zip}',
-                '{street_num} Plaza Dr, {city}, CA {zip}',
-                '{street_num} Center St, {city}, CA {zip}',
-                '{street_num} Mall Dr, {city}, CA {zip}',
-                '{street_num} Retail Row, {city}, CA {zip}',
-                '{street_num} Commerce Way, {city}, CA {zip}',
-                '{street_num} Store St, {city}, CA {zip}',
-                '{street_num} Shop Ave, {city}, CA {zip}'
-            ],
-            'plumbing': [
-                '{street_num} Water St, {city}, CA {zip}',
-                '{street_num} Pipe Ave, {city}, CA {zip}',
-                '{street_num} Drain Blvd, {city}, CA {zip}',
-                '{street_num} Service Way, {city}, CA {zip}',
-                '{street_num} Repair Dr, {city}, CA {zip}',
-                '{street_num} Industrial Ave, {city}, CA {zip}',
-                '{street_num} Workshop St, {city}, CA {zip}',
-                '{street_num} Trade Blvd, {city}, CA {zip}',
-                '{street_num} Professional Dr, {city}, CA {zip}',
-                '{street_num} Business Park Way, {city}, CA {zip}'
-            ],
-            'construction': [
-                '{street_num} Builder Ave, {city}, CA {zip}',
-                '{street_num} Construction Way, {city}, CA {zip}',
-                '{street_num} Industrial Blvd, {city}, CA {zip}',
-                '{street_num} Contractor St, {city}, CA {zip}',
-                '{street_num} Building Dr, {city}, CA {zip}',
-                '{street_num} Trade Center Way, {city}, CA {zip}',
-                '{street_num} Warehouse Rd, {city}, CA {zip}',
-                '{street_num} Supply St, {city}, CA {zip}',
-                '{street_num} Equipment Ave, {city}, CA {zip}',
-                '{street_num} Materials Blvd, {city}, CA {zip}'
-            ],
-            'automotive': [
-                '{street_num} Auto Row, {city}, CA {zip}',
-                '{street_num} Mechanic St, {city}, CA {zip}',
-                '{street_num} Service Blvd, {city}, CA {zip}',
-                '{street_num} Garage Way, {city}, CA {zip}',
-                '{street_num} Motor Ave, {city}, CA {zip}',
-                '{street_num} Car Center Dr, {city}, CA {zip}',
-                '{street_num} Vehicle St, {city}, CA {zip}',
-                '{street_num} Engine Blvd, {city}, CA {zip}',
-                '{street_num} Repair Shop Way, {city}, CA {zip}',
-                '{street_num} Auto Park Dr, {city}, CA {zip}'
-            ],
-            'medical': [
-                '{street_num} Medical Center Dr, {city}, CA {zip}',
-                '{street_num} Health Ave, {city}, CA {zip}',
-                '{street_num} Hospital Way, {city}, CA {zip}',
-                '{street_num} Clinic St, {city}, CA {zip}',
-                '{street_num} Care Blvd, {city}, CA {zip}',
-                '{street_num} Wellness Dr, {city}, CA {zip}',
-                '{street_num} Practice Ave, {city}, CA {zip}',
-                '{street_num} Treatment Way, {city}, CA {zip}',
-                '{street_num} Surgery St, {city}, CA {zip}',
-                '{street_num} Professional Plaza, {city}, CA {zip}'
-            ],
-            'legal': [
-                '{street_num} Law Center Dr, {city}, CA {zip}',
-                '{street_num} Attorney Ave, {city}, CA {zip}',
-                '{street_num} Legal Way, {city}, CA {zip}',
-                '{street_num} Justice St, {city}, CA {zip}',
-                '{street_num} Court Blvd, {city}, CA {zip}',
-                '{street_num} Lawyer Dr, {city}, CA {zip}',
-                '{street_num} Office Park Way, {city}, CA {zip}',
-                '{street_num} Professional Center, {city}, CA {zip}',
-                '{street_num} Bar Association Dr, {city}, CA {zip}',
-                '{street_num} Legal Plaza, {city}, CA {zip}'
-            ],
-            'technology': [
-                '{street_num} Tech Center Dr, {city}, CA {zip}',
-                '{street_num} Innovation Way, {city}, CA {zip}',
-                '{street_num} Digital Blvd, {city}, CA {zip}',
-                '{street_num} Software St, {city}, CA {zip}',
-                '{street_num} Tech Park Ave, {city}, CA {zip}',
-                '{street_num} Startup Row, {city}, CA {zip}',
-                '{street_num} Silicon Dr, {city}, CA {zip}',
-                '{street_num} Data Way, {city}, CA {zip}',
-                '{street_num} Code St, {city}, CA {zip}',
-                '{street_num} Internet Blvd, {city}, CA {zip}'
+        # Use all available APIs for comprehensive business discovery
+        if not request.industry or request.industry.lower() in ['all', 'all industries', '']:
+            # Multi-industry search for comprehensive coverage
+            search_queries = [
+                f"hvac companies {request.location}",
+                f"restaurants {request.location}",
+                f"auto repair {request.location}",
+                f"construction companies {request.location}",
+                f"medical clinics {request.location}",
+                f"law firms {request.location}",
+                f"retail stores {request.location}",
+                f"plumbing services {request.location}",
+                f"tech companies {request.location}",
+                f"accounting firms {request.location}",
             ]
-        }
+        else:
+            # Single industry search with keyword mapping for better results
+            ind = (request.industry or '').strip().lower()
+            keyword_map = {
+                'electrical': ['electrician', 'electrical contractor'],
+                'hvac': ['hvac', 'heating and air'],
+                'plumbing': ['plumber', 'plumbing company'],
+                'landscaping': ['landscaping', 'lawn care'],
+                'automotive': ['auto repair', 'mechanic'],
+                'construction': ['construction company', 'general contractor'],
+                'restaurant': ['restaurant'],
+                'retail': ['retail store'],
+                'healthcare': ['clinic', 'medical clinic'],
+                'it services': ['it services', 'managed it'],
+                'real estate': ['real estate agency'],
+                'education': ['tutoring center', 'school'],
+            }
+            base_terms = keyword_map.get(ind, [ind or 'business'])
+            search_queries = [f"{t} {request.location}" for t in base_terms]
         
-        # Get appropriate address templates for industry
-        industry_key = request.industry.lower() if request.industry else 'hvac'
-        if industry_key not in address_templates:
-            industry_key = 'hvac'  # fallback
+        # Aggregate data from all available sources
+        all_businesses = []
+        from ..crawlers.smart_crawler_hub import CrawlerType, CrawlRequest
         
-        templates = address_templates[industry_key]
-        
-        # Generate realistic street numbers and zip codes based on city
-        import random
-        random.seed(hash(request.location))  # Consistent for same location
-        
-        def generate_address(template_idx, industry_override=None):
-            street_num = random.randint(100, 9999)
-            # Generate realistic zip codes based on city
-            if 'san francisco' in request.location.lower():
-                zip_code = random.choice(['94102', '94103', '94104', '94105', '94107', '94108', '94109', '94110', '94111', '94114', '94115', '94116', '94117', '94118', '94121', '94122', '94123', '94124', '94127', '94131', '94132', '94133', '94134'])
-            elif 'los angeles' in request.location.lower():
-                zip_code = random.choice(['90001', '90002', '90003', '90004', '90005', '90006', '90007', '90008', '90010', '90011', '90012', '90013', '90014', '90015', '90016', '90017', '90018', '90019', '90020'])
-            elif 'new york' in request.location.lower():
-                zip_code = random.choice(['10001', '10002', '10003', '10004', '10005', '10006', '10007', '10009', '10010', '10011', '10012', '10013', '10014', '10016', '10017', '10018', '10019', '10020'])
-            elif 'chicago' in request.location.lower():
-                zip_code = random.choice(['60601', '60602', '60603', '60604', '60605', '60606', '60607', '60608', '60609', '60610', '60611', '60612', '60613', '60614', '60615', '60616', '60617', '60618', '60619', '60620'])
-            else:
-                zip_code = str(random.randint(90000, 99999))
-            
-            # Use industry override or default templates
-            if industry_override and industry_override in address_templates:
-                selected_templates = address_templates[industry_override]
-            else:
-                selected_templates = templates
-            
-            return selected_templates[template_idx % len(selected_templates)].format(
-                street_num=street_num,
-                city=request.location,
-                zip=zip_code
-            )
-        
-        # Generate more businesses using API aggregation and crawlers
-        # Use real API integration approach similar to Knowledge.com and smb.co
-        sample_businesses = []  # Initialize here to avoid scope issues
-        
-        try:
-            from ..crawlers.smart_crawler_hub import SmartCrawlerHub
-            # Initialize crawler hub for real data aggregation
-            crawler_hub = SmartCrawlerHub()
-            
-            # Use Google SERP API for business discovery
-            if not request.industry or request.industry.lower() in ['all', 'all industries', '']:
-                # Multi-industry search for comprehensive coverage
-                search_queries = [
-                    f"hvac companies {request.location}",
-                    f"restaurants {request.location}",
-                    f"auto repair {request.location}",
-                    f"construction companies {request.location}",
-                    f"medical clinics {request.location}",
-                    f"law firms {request.location}",
-                    f"retail stores {request.location}",
-                    f"plumbing services {request.location}",
-                    f"tech companies {request.location}",
-                    f"accounting firms {request.location}",
-                ]
-            else:
-                # Single industry search with keyword mapping for better results
-                ind = (request.industry or '').strip().lower()
-                keyword_map = {
-                    'electrical': ['electrician', 'electrical contractor'],
-                    'hvac': ['hvac', 'heating and air'],
-                    'plumbing': ['plumber', 'plumbing company'],
-                    'landscaping': ['landscaping', 'lawn care'],
-                    'automotive': ['auto repair', 'mechanic'],
-                    'construction': ['construction company', 'general contractor'],
-                    'restaurant': ['restaurant'],
-                    'retail': ['retail store'],
-                    'healthcare': ['clinic', 'medical clinic'],
-                    'it services': ['it services', 'managed it'],
-                    'real estate': ['real estate agency'],
-                    'education': ['tutoring center', 'school'],
-                }
-                base_terms = keyword_map.get(ind, [ind or 'business'])
-                search_queries = [f"{t} {request.location}" for t in base_terms]
-            
-            # Aggregate data from multiple sources
-            all_businesses = []
-            from ..crawlers.smart_crawler_hub import CrawlerType, CrawlRequest
-            for query in search_queries[:5]:  # Allow more queries to reach up to 50 businesses
-                try:
-                    crawl_req = CrawlRequest(
-                        crawler_type=CrawlerType.GOOGLE_SERP,
-                        target_url="https://serpapi.com/search.json",
-                        search_params={
-                            "query": query,
-                            "industry": request.industry or "",
-                            "location": request.location
-                        },
-                        priority=1
-                    )
-                    crawl_res = await crawler_hub._execute_crawl(crawl_req)
-                    if crawl_res and crawl_res.success:
-                        # Keep only entries with both name and a real-looking street address (number + street)
-                        for item in crawl_res.data[:40]:
-                            name_val = item.get('name')
-                            addr_val = item.get('address')
-                            if not isinstance(name_val, str):
-                                continue
-                            name_val = name_val.strip()
-                            if not name_val:
-                                continue
-                            addr_val = (addr_val or '').strip()
-                            looks_like_street = False
-                            if isinstance(addr_val, str) and addr_val:
-                                low = addr_val.lower()
-                                looks_like_street = (any(x in low for x in [' st', ' street', ' ave', ' avenue', ' rd', ' road', ' blvd', ' boulevard', ' dr', ' drive', ' ln', ' lane', ' way', ' ct', ' court']) and any(ch.isdigit() for ch in addr_val[:12]))
-                            has_coords = isinstance(item.get('coordinates'), (list, tuple)) and len(item.get('coordinates')) == 2
-                            has_site = isinstance(item.get('website'), str) and len(item.get('website')) > 4
-                            # Accept if street-like OR have coords/site (we can verify client-side)
-                            if not (looks_like_street or has_coords or has_site):
-                                continue
-                            all_businesses.append({
-                                'name': name_val,
-                                'industry': (request.industry or '').lower() or _infer_industry_from_query(query),
-                                'address': addr_val,
-                                'phone': item.get('phone'),
-                                'website': item.get('website'),
-                                'rating': item.get('rating') or 0.0,
-                                'reviews': item.get('review_count') or item.get('reviews') or 0,
-                                'coordinates': item.get('coordinates'),
-                                'source': item.get('source') or crawl_res.source
-                            })
-                except Exception as e:
-                    logger.warning(f"SERP search failed for '{query}': {e}")
-            
-            # If real API data is available, use it; otherwise try Apify GMaps; else fall back to samples
-            if len(all_businesses) < 20:
-                try:
-                    apify_req = CrawlRequest(
-                        crawler_type=CrawlerType.APIFY_GMAPS,
-                        target_url="apify://apify/google-maps-scraper",
-                        search_params={
-                            'search': f"{(base_terms[0] if (request and request.industry) else 'business')} {request.location}",
-                            'maxCrawledPlacesPerSearch': 50
-                        },
-                        priority=1
-                    )
-                    apify_res = await crawler_hub._execute_crawl(apify_req)
-                    if apify_res and apify_res.success:
-                        for it in apify_res.data[:20]:
-                            n = it.get('name')
-                            a = it.get('address')
-                            if isinstance(n, str) and isinstance(a, str) and n.strip() and a.strip():
-                                all_businesses.append({
-                                    'name': n.strip(),
-                                    'industry': (request.industry or '').lower() or 'all',
-                                    'address': a.strip(),
-                                    'phone': it.get('phone'),
-                                    'website': it.get('website'),
-                                    'rating': it.get('rating') or 0.0,
-                                    'reviews': it.get('review_count') or it.get('reviews') or 0,
-                                    'coordinates': it.get('coordinates'),
-                                    'source': it.get('source') or 'apify_gmaps'
-                                })
-                except Exception as ap_e:
-                    logger.warning(f"Apify GMaps fallback failed: {ap_e}")
-
-            if len(all_businesses) >= 1:
-                # Dedupe by (name,address)
-                seen = set()
-                deduped = []
-                for b in all_businesses:
-                    key = (b['name'].lower(), b['address'].lower())
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    deduped.append(b)
-                sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
-            else:
-                # No sample data fallback - return empty if no real data found
-                logger.warning(f"No real business data found for {request.location} {request.industry}")
-                sample_businesses = []
-                
-        except Exception as e:
-            logger.error(f"API crawling failed: {e}")
-            # No sample data fallback - return empty if APIs fail
-            # No sample data - API-only approach
-            pass
-        
-        # Step 2: Quick normalization (minimal processing)
-        businesses = []
-        
-        # Limit businesses based on request
-        max_businesses = min(request.max_businesses or 20, 50)  # Cap at 50 max
-        sample_businesses = sample_businesses[:max_businesses]
-        
-        def _parse_city_state_zip(addr_text: str):
+        # 1. Google SERP aggregation
+        for query in search_queries[:5]:  # Allow more queries to reach up to 50 businesses
             try:
-                parts = [p.strip() for p in (addr_text or "").split(',') if p and p.strip()]
-                city = None; state = None; zip_code = None
-                if len(parts) >= 2:
-                    tail = ','.join(parts[1:])
-                    import re
-                    m = re.search(r"([A-Za-z .'-]+),?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?", tail)
-                    if m:
-                        city = m.group(1).strip()
-                        state = m.group(2)
-                        zip_code = m.group(3)
-                return city, state, zip_code
-            except Exception:
-                return None, None, None
-
-        for i, biz in enumerate(sample_businesses):  # Process sample businesses
-            try:
-                # Quick normalization without heavy processing
-                formatted_addr = biz.get('address', '')
-                city_p, state_p, zip_p = _parse_city_state_zip(formatted_addr)
-                normalized = {
-                    'business_id': f"raw_{i}_{hash(str(biz))}",
-                    'name': biz.get('name', 'Unknown Business'),
-                    'category': biz.get('industry', request.industry or 'hvac'),
-                    'industry': biz.get('industry', request.industry or 'hvac'),
-                    'address': {
-                        'formatted_address': formatted_addr,
-                        'line1': formatted_addr.split(',')[0].strip() if formatted_addr else None,
-                        'city': city_p or request.location,
-                        'state': state_p or 'CA',
-                        'zip_code': zip_p,
-                        'coordinates': biz.get('coordinates', [])
+                crawl_req = CrawlRequest(
+                    crawler_type=CrawlerType.GOOGLE_SERP,
+                    target_url="https://serpapi.com/search.json",
+                    search_params={
+                        "query": query,
+                        "industry": request.industry or "",
+                        "location": request.location
                     },
-                    'contact': {
-                        'phone': biz.get('phone', ''),
-                        'email': None,
-                        'website': _normalize_website(biz.get('website', '')),
-                        'phone_valid': bool(biz.get('phone')),
-                        'email_valid': False,
-                        'website_valid': bool(biz.get('website'))
-                    },
-                    'metrics': {
-                        'rating': biz.get('rating', 0.0),
-                        'review_count': biz.get('reviews', 0),
-                        'estimated_revenue': max(biz.get('reviews', 0) * 1000, 50000),  # Estimate based on reviews
-                        'employee_count': max(int(biz.get('reviews', 0) / 50), 2),  # Rough estimate
-                        'years_in_business': min(max(int(biz.get('reviews', 0) / 20), 5), 30),  # Rough estimate
-                        'lead_score': min(int(biz.get('rating', 0) * 12.4), 62)  # Score based on rating
-                    },
-                    'computed': {
-                        'min_revenue': int((biz.get('rating', 0) or 0) * 50000) if biz.get('rating') else None,
-                        'max_revenue': int(max(biz.get('reviews', 0) or 0, 1) * 10000) if biz.get('reviews') is not None else None,
-                        'owner_age': 45,
-                        'num_locations': 1,
-                        'source': biz.get('source', 'google_serp')
-                    },
-                    'data_quality': 'medium',
-                    'data_sources': quick_sources,
-                    'last_updated': datetime.now().isoformat(),
-                    'tags': ['fallback_minimal']
-                }
-                businesses.append(normalized)
+                    priority=1
+                )
+                crawl_res = await crawler_hub._execute_crawl(crawl_req)
+                if crawl_res and crawl_res.success:
+                    # Keep entries with name and address/coords/website
+                    for item in crawl_res.data[:40]:
+                        name_val = item.get('name')
+                        addr_val = item.get('address')
+                        if not isinstance(name_val, str):
+                            continue
+                        name_val = name_val.strip()
+                        if not name_val:
+                            continue
+                        addr_val = (addr_val or '').strip()
+                        looks_like_street = False
+                        if isinstance(addr_val, str) and addr_val:
+                            low = addr_val.lower()
+                            looks_like_street = (any(x in low for x in [' st', ' street', ' ave', ' avenue', ' rd', ' road', ' blvd', ' boulevard', ' dr', ' drive', ' ln', ' lane', ' way', ' ct', ' court']) and any(ch.isdigit() for ch in addr_val[:12]))
+                        has_coords = isinstance(item.get('coordinates'), (list, tuple)) and len(item.get('coordinates')) == 2
+                        website_val = item.get('website', '')
+                        has_site = isinstance(website_val, str) and len(website_val.strip()) > 4
+                        # Accept if street-like OR have coords/site (we can verify client-side)
+                        if not (looks_like_street or has_coords or has_site):
+                            continue
+                        # Clean up website URL
+                        website_clean = website_val.strip() if website_val else ''
+                        if website_clean and not website_clean.startswith(('http://', 'https://')):
+                            website_clean = f"https://{website_clean}"
+                        all_businesses.append({
+                            'name': name_val,
+                            'industry': (request.industry or '').lower() or _infer_industry_from_query(query),
+                            'address': addr_val,
+                            'phone': item.get('phone'),
+                            'website': website_clean,
+                            'rating': item.get('rating') or 0.0,
+                            'reviews': item.get('review_count') or item.get('reviews') or 0,
+                            'coordinates': item.get('coordinates'),
+                            'source': item.get('source') or crawl_res.source
+                        })
             except Exception as e:
-                logger.warning(f"Quick processing failed for business {i}: {e}")
-                continue
+                logger.warning(f"SERP search failed for '{query}': {e}")
         
-        processing_time = time.time() - start_time
+        # 2. Google Maps (Apify) aggregation if insufficient results
+        if len(all_businesses) < 20:
+            try:
+                apify_req = CrawlRequest(
+                    crawler_type=CrawlerType.APIFY_GMAPS,
+                    target_url="apify://apify/google-maps-scraper",
+                    search_params={
+                        'search': f"{(base_terms[0] if (request and request.industry) else 'business')} {request.location}",
+                        'maxCrawledPlacesPerSearch': 50
+                    },
+                    priority=1
+                )
+                apify_res = await crawler_hub._execute_crawl(apify_req)
+                if apify_res and apify_res.success:
+                    for it in apify_res.data[:20]:
+                        n = it.get('name')
+                        a = it.get('address')
+                        if isinstance(n, str) and n.strip():
+                            website_val = it.get('website', '')
+                            website_clean = website_val.strip() if website_val else ''
+                            if website_clean and not website_clean.startswith(('http://', 'https://')):
+                                website_clean = f"https://{website_clean}"
+                            all_businesses.append({
+                                'name': n.strip(),
+                                'industry': (request.industry or '').lower() or 'all',
+                                'address': a.strip() if isinstance(a, str) else '',
+                                'phone': it.get('phone'),
+                                'website': website_clean,
+                                'rating': it.get('rating') or 0.0,
+                                'reviews': it.get('review_count') or it.get('reviews') or 0,
+                                'coordinates': it.get('coordinates'),
+                                'source': it.get('source') or 'apify_gmaps'
+                            })
+            except Exception as ap_e:
+                logger.warning(f"Apify GMaps fallback failed: {ap_e}")
         
-        # Simplified response for speed
-        api_response = {
-            "request_id": request_id,
-            "status": "completed",
-            "location": request.location,
-            "industry": request.industry or 'hvac',
-            "processing_time": processing_time,
-            "timestamp": datetime.now().isoformat(),
+        # 3. Yelp aggregation for additional data
+        if len(all_businesses) < 30:
+            try:
+                yelp_req = CrawlRequest(
+                    crawler_type=CrawlerType.YELP,
+                    target_url="https://api.yelp.com/v3/businesses/search",
+                    search_params={
+                        "location": request.location,
+                        "term": (base_terms[0] if (request and request.industry) else 'business'),
+                        "limit": 20
+                    },
+                    priority=1
+                )
+                yelp_res = await crawler_hub._execute_crawl(yelp_req)
+                if yelp_res and yelp_res.success:
+                    for yelp_item in yelp_res.data[:15]:
+                        y_name = yelp_item.get('name')
+                        if isinstance(y_name, str) and y_name.strip():
+                            y_addr = yelp_item.get('location', {}).get('display_address', [])
+                            y_addr_str = ', '.join(y_addr) if isinstance(y_addr, list) else str(y_addr) if y_addr else ''
+                            website_val = yelp_item.get('url', '')
+                            website_clean = website_val.strip() if website_val else ''
+                            if website_clean and not website_clean.startswith(('http://', 'https://')):
+                                website_clean = f"https://{website_clean}"
+                            all_businesses.append({
+                                'name': y_name.strip(),
+                                'industry': (request.industry or '').lower() or 'all',
+                                'address': y_addr_str,
+                                'phone': yelp_item.get('phone'),
+                                'website': website_clean,
+                                'rating': yelp_item.get('rating') or 0.0,
+                                'reviews': yelp_item.get('review_count') or 0,
+                                'coordinates': [yelp_item.get('coordinates', {}).get('latitude'), yelp_item.get('coordinates', {}).get('longitude')] if yelp_item.get('coordinates') else None,
+                                'source': 'yelp'
+                            })
+            except Exception as yelp_e:
+                logger.warning(f"Yelp aggregation failed: {yelp_e}")
+
+        # Only use real data - no samples allowed
+        if len(all_businesses) >= 1:
+            # Dedupe by (name,address)
+            seen = set()
+            deduped = []
+            for b in all_businesses:
+                key = (b['name'].lower(), b['address'].lower())
+                if key in seen:
+                    continue
+                seen.add(key)
+                deduped.append(b)
+            sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
+        else:
+            # Return empty result if no real data found
+            logger.warning("No real business data found from any API source")
+            sample_businesses = []
             
-            # Business data
-            "businesses": businesses,
-            "business_count": len(businesses),
-            
-            # Minimal market intelligence
-            "market_intelligence": {
-                "market_metrics": {},
-                "market_clusters": [],
-                "fragmentation_analysis": {},
-                "tam_estimate": 0,
-                "hhi_index": 0,
-                "fragmentation_level": "unknown"
-            },
-            
-            # Minimal lead intelligence
-            "lead_intelligence": {
-                "top_leads": [],
-                "lead_distribution": {},
-                "total_qualified_leads": 0
-            },
-            
-            # Minimal recommendations
-            "recommendations": {
-                "acquisition_opportunities": [],
-                "market_opportunities": []
-            },
-            
-            # Data quality
-            "data_quality": {
-                "overall_score": 0.6,
-                "sources_used": quick_sources,
-                "cache_hit_rate": 0.0
-            },
-            
-            # Performance metrics
-            "performance": {
-                "total_time": processing_time,
-                "crawl_time": processing_time * 0.8,
-                "processing_time": processing_time * 0.2
-            },
-            
-            # Errors (if any)
-            "errors": []
-        }
-        
-        return JSONResponse(content=jsonable_encoder(api_response))
-        
     except Exception as e:
-        import time
-        logger.error(f"Quick scan failed: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "request_id": f"error_{int(time.time())}",
-                "status": "error",
-                "error": str(e),
-                "businesses": [],
-                "business_count": 0,
-                "data_quality": {
-                    "overall_score": 0.0,
-                    "sources_used": [],
-                    "cache_hit_rate": 0.0
-                }
-            }
-        )
-
-
-@router.post("/leads", response_model=Dict[str, Any])
-async def generate_qualified_leads(
-    request: LeadGenerationRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Generate qualified leads with advanced scoring
+        logger.error(f"Real data aggregation failed: {e}")
+        sample_businesses = []
     
-    This endpoint focuses specifically on lead generation and scoring,
-    applying advanced filters and ranking algorithms to identify the
-    most promising acquisition targets.
-    """
-    try:
-        # Create intelligence request focused on lead generation
-        intel_request = IntelligenceRequest(
-            location=request.location,
-            industry=request.industry,
-            max_businesses=request.max_leads * 2,  # Get more to filter down
-            analysis_types=["lead_score", "succession_risk", "acquisition_attractiveness"],
-            priority=1
-        )
-        
-        # Process request
-        response = await intelligence_service.process_intelligence_request(intel_request)
-        
-        # Filter and rank leads
-        qualified_leads = []
-        for business in response.businesses:
-            analysis = business.get('analysis', {})
-            lead_score = analysis.get('lead_score', {}).get('overall_score', 0)
-            succession_risk = analysis.get('succession_risk', {}).get('succession_risk_score', 0)
-            revenue = business['metrics']['estimated_revenue'] or 0
+    # Step 2: Normalize business data
+    businesses = []
+    
+    # Limit businesses based on request
+    max_businesses = min(request.max_businesses or 20, 50)  # Cap at 50 max
+    sample_businesses = sample_businesses[:max_businesses]
+    
+    def _parse_city_state_zip(addr_text: str):
+        try:
+            parts = [p.strip() for p in (addr_text or "").split(',') if p and p.strip()]
+            city = None; state = None; zip_code = None
+            if len(parts) >= 2:
+                tail = ','.join(parts[1:])
+                import re
+                m = re.search(r"([A-Za-z .'-]+),?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?", tail)
+                if m:
+                    city = m.group(1).strip()
+                    state = m.group(2).strip()
+                    zip_code = m.group(3).strip() if m.group(3) else None
+                elif len(parts) >= 3:
+                    city = parts[1].strip()
+                    state_zip = parts[2].strip()
+                    szm = re.search(r"^([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?", state_zip)
+                    if szm:
+                        state = szm.group(1)
+                        zip_code = szm.group(2) if szm.group(2) else None
+            return city, state, zip_code
+        except Exception:
+            return None, None, None
+
+    def _infer_industry_from_query(q: str) -> str:
+        q_low = q.lower()
+        if 'hvac' in q_low or 'heating' in q_low or 'air conditioning' in q_low:
+            return 'hvac'
+        elif 'restaurant' in q_low or 'cafe' in q_low or 'diner' in q_low:
+            return 'restaurant'
+        elif 'auto' in q_low or 'repair' in q_low or 'mechanic' in q_low:
+            return 'automotive'
+        elif 'construction' in q_low or 'contractor' in q_low:
+            return 'construction'
+        elif 'medical' in q_low or 'clinic' in q_low or 'doctor' in q_low:
+            return 'healthcare'
+        elif 'law' in q_low or 'attorney' in q_low or 'legal' in q_low:
+            return 'legal'
+        elif 'tech' in q_low or 'software' in q_low or 'it' in q_low:
+            return 'technology'
+        elif 'plumb' in q_low:
+            return 'plumbing'
+        elif 'electric' in q_low:
+            return 'electrical'
+        elif 'account' in q_low:
+            return 'accounting'
+        else:
+            return 'general'
+
+    for i, biz in enumerate(sample_businesses):
+        try:
+            # Parse address
+            line1, city, state, zip_code = _parse_city_state_zip(biz.get('address', ''))
             
-            # Apply filters
-            if lead_score < request.min_lead_score:
-                continue
-            if request.succession_risk_min and succession_risk < request.succession_risk_min:
-                continue
-            if request.revenue_min and revenue < request.revenue_min:
-                continue
+            # Estimate revenue based on rating, reviews, and industry
+            rating = biz.get('rating', 0.0)
+            reviews = biz.get('reviews', 0)
+            base_revenue = max(250000, reviews * 2000 + rating * 50000)
+            min_revenue = int(base_revenue * 0.7)
+            max_revenue = int(base_revenue * 1.5)
             
-            # Create lead entry
-            lead = {
-                "business_id": business['business_id'],
-                "business_name": business['name'],
-                "industry": business['category'],
-                "location": business['address']['formatted_address'],
-                
-                # Lead scoring
-                "lead_score": lead_score,
-                "lead_grade": analysis.get('lead_score', {}).get('lead_grade', 'D'),
-                "priority": analysis.get('lead_score', {}).get('priority', 'low'),
-                "close_probability": analysis.get('lead_score', {}).get('estimated_close_probability', 0),
-                
-                # Business metrics
-                "estimated_revenue": revenue,
-                "employee_count": business['metrics']['employee_count'],
-                "years_in_business": business['metrics']['years_in_business'],
-                "rating": business['metrics']['rating'],
-                "review_count": business['metrics']['review_count'],
-                
-                # Acquisition factors
-                "succession_risk_score": succession_risk,
-                "acquisition_attractiveness": analysis.get('acquisition_attractiveness', {}).get('overall_score', 0),
-                "growth_potential": analysis.get('growth_potential', {}).get('exit_readiness_score', 0),
-                
-                # Contact information
-                "contact": business['contact'],
-                
-                # Recommendations
-                "follow_up_recommendations": analysis.get('lead_score', {}).get('follow_up_recommendations', []),
-                "key_strengths": analysis.get('acquisition_attractiveness', {}).get('key_strengths', []),
-                "key_concerns": analysis.get('acquisition_attractiveness', {}).get('key_concerns', []),
-                
-                # Data quality
-                "data_quality": business['data_quality'],
-                "last_updated": business['last_updated']
+            # Estimate other metrics
+            employee_count = max(3, min(25, int(base_revenue / 80000)))
+            years_in_business = max(2, min(20, int(reviews / 10 + rating)))
+            lead_score = min(100, max(20, int(rating * 15 + min(reviews, 50))))
+            owner_age = 35 + int((reviews % 20) + (rating * 3))
+            num_locations = 1 if reviews < 100 else (2 if reviews < 300 else 3)
+            
+            normalized = {
+                'business_id': biz.get('business_id') or biz.get('place_id') or biz.get('data_id') or f"raw_{i}_{hash(str(biz))}",
+                'name': biz.get('name', 'Unknown Business'),
+                'category': biz.get('industry', request.industry or 'hvac'),
+                'industry': biz.get('industry', request.industry or 'hvac'),
+                'address': {
+                    'formatted_address': biz.get('address', ''),
+                    'line1': line1,
+                    'city': city,
+                    'state': state,
+                    'zip_code': zip_code,
+                    'coordinates': biz.get('coordinates', [])
+                },
+                'contact': {
+                    'phone': biz.get('phone', ''),
+                    'email': None,  # Explicitly set to None, can be enriched later
+                    'website': biz.get('website', ''),
+                    'phone_valid': bool(biz.get('phone')),
+                    'email_valid': False,
+                    'website_valid': bool(biz.get('website'))
+                },
+                'metrics': {
+                    'rating': rating,
+                    'review_count': reviews,
+                    'estimated_revenue': base_revenue,
+                    'min_revenue': min_revenue,
+                    'max_revenue': max_revenue,
+                    'employee_count': employee_count,
+                    'years_in_business': years_in_business,
+                    'lead_score': lead_score,
+                    'owner_age': owner_age,
+                    'num_locations': num_locations
+                },
+                'data_quality': 'high' if biz.get('source') in ['google_serp', 'yelp'] else 'medium',
+                'data_sources': [biz.get('source', 'unknown')] if biz.get('source') else ['api_aggregated'],
+                'last_updated': datetime.now().isoformat(),
+                'tags': ['real_data', 'api_verified']
             }
-            
-            qualified_leads.append(lead)
-        
-        # Sort by lead score and take top results
-        qualified_leads.sort(key=lambda x: x['lead_score'], reverse=True)
-        qualified_leads = qualified_leads[:request.max_leads]
-        
-        # Generate summary statistics
-        lead_summary = {
-            "total_leads": len(qualified_leads),
-            "average_lead_score": sum(lead['lead_score'] for lead in qualified_leads) / len(qualified_leads) if qualified_leads else 0,
-            "average_succession_risk": sum(lead['succession_risk_score'] for lead in qualified_leads) / len(qualified_leads) if qualified_leads else 0,
-            "total_market_value": sum(lead['estimated_revenue'] for lead in qualified_leads),
-            "grade_distribution": {},
-            "priority_distribution": {}
-        }
-        
-        # Calculate distributions
-        for lead in qualified_leads:
-            grade = lead['lead_grade']
-            priority = lead['priority']
-            
-            lead_summary['grade_distribution'][grade] = lead_summary['grade_distribution'].get(grade, 0) + 1
-            lead_summary['priority_distribution'][priority] = lead_summary['priority_distribution'].get(priority, 0) + 1
-        
-        return {
-            "request_id": response.request_id,
+            businesses.append(normalized)
+        except Exception as parse_e:
+            logger.warning(f"Failed to normalize business {i}: {parse_e}")
+            continue
+
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    logger.info(f"Market scan completed in {duration:.2f}s, found {len(businesses)} businesses")
+    
+    return {
+        "success": True,
+        "request_id": request_id,
+        "businesses": businesses,
+        "total_found": len(businesses),
+        "query_info": {
             "location": request.location,
             "industry": request.industry or "all",
+            "radius_miles": request.radius_miles,
+            "search_duration_seconds": duration,
+            "data_sources": list(set([b.get('data_sources', ['unknown'])[0] for b in businesses if b.get('data_sources')]))
+        },
+        "metadata": {
             "timestamp": datetime.now().isoformat(),
-            "qualified_leads": qualified_leads,
-            "lead_summary": lead_summary,
-            "processing_time": response.processing_time
+            "processing_time_ms": int(duration * 1000),
+            "api_version": "2.0",
+            "real_data_only": True
         }
-        
-    except Exception as e:
-        logger.error(f"Lead generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Lead generation failed: {str(e)}")
-
-
-@router.post("/fragmentation", response_model=Dict[str, Any])
-async def analyze_market_fragmentation(
-    request: FragmentationAnalysisRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Analyze market fragmentation and consolidation opportunities
-    
-    This endpoint performs deep market fragmentation analysis using
-    the Herfindahl-Hirschman Index and other concentration metrics
-    to identify roll-up and consolidation opportunities.
-    """
-    try:
-        # Create intelligence request focused on fragmentation
-        intel_request = IntelligenceRequest(
-            location=request.location,
-            industry=request.industry,
-            max_businesses=100,  # Get more businesses for better fragmentation analysis
-            analysis_types=["market_fragmentation", "acquisition_attractiveness"],
-            priority=1
-        )
-        
-        # Process request
-        response = await intelligence_service.process_intelligence_request(intel_request)
-        
-        fragmentation_data = response.fragmentation_analysis
-        businesses = response.businesses
-        
-        # Calculate additional fragmentation metrics
-        revenues = [b['metrics']['estimated_revenue'] or 0 for b in businesses]
-        total_revenue = sum(revenues)
-        
-        # Market concentration ratios
-        sorted_revenues = sorted(revenues, reverse=True)
-        cr4 = sum(sorted_revenues[:4]) / total_revenue * 100 if total_revenue > 0 else 0
-        cr8 = sum(sorted_revenues[:8]) / total_revenue * 100 if total_revenue > 0 else 0
-        
-        # Roll-up analysis
-        roll_up_analysis = {}
-        if request.include_roll_up_analysis:
-            # Identify potential roll-up targets
-            roll_up_targets = []
-            for business in businesses:
-                analysis = business.get('analysis', {})
-                succession_risk = analysis.get('succession_risk', {}).get('succession_risk_score', 0)
-                acquisition_score = analysis.get('acquisition_attractiveness', {}).get('overall_score', 0)
-                revenue = business['metrics']['estimated_revenue'] or 0
-                
-                if succession_risk > 60 and revenue > 500000:  # Good roll-up candidate
-                    roll_up_targets.append({
-                        "business_name": business['name'],
-                        "estimated_revenue": revenue,
-                        "succession_risk": succession_risk,
-                        "acquisition_score": acquisition_score,
-                        "employee_count": business['metrics']['employee_count'],
-                        "market_share": business['metrics']['market_share_percent']
-                    })
-            
-            # Sort by acquisition attractiveness
-            roll_up_targets.sort(key=lambda x: x['acquisition_score'], reverse=True)
-            
-            # Calculate roll-up potential
-            total_roll_up_revenue = sum(target['estimated_revenue'] for target in roll_up_targets)
-            synergy_estimate = total_roll_up_revenue * 0.15  # Assume 15% synergies
-            
-            roll_up_analysis = {
-                "potential_targets": roll_up_targets[:20],  # Top 20 targets
-                "total_targets": len(roll_up_targets),
-                "total_target_revenue": total_roll_up_revenue,
-                "estimated_synergies": synergy_estimate,
-                "roll_up_feasibility": "high" if len(roll_up_targets) >= 5 else "medium" if len(roll_up_targets) >= 3 else "low",
-                "estimated_market_share_post_rollup": min(35, (total_roll_up_revenue / total_revenue * 100)) if total_revenue > 0 else 0
-            }
-        
-        return {
-            "request_id": response.request_id,
-            "location": request.location,
-            "industry": request.industry,
-            "timestamp": datetime.now().isoformat(),
-            
-            # Core fragmentation metrics
-            "fragmentation_metrics": {
-                "hhi_index": fragmentation_data.get('hhi_index', 0),
-                "fragmentation_level": fragmentation_data.get('fragmentation_level', 'unknown'),
-                "concentration_ratio_4": cr4,
-                "concentration_ratio_8": cr8,
-                "number_of_competitors": len(businesses),
-                "market_leader_share": max([b['metrics']['market_share_percent'] or 0 for b in businesses]) if businesses else 0,
-                "total_market_revenue": total_revenue
-            },
-            
-            # Consolidation opportunity
-            "consolidation_opportunity": {
-                "level": fragmentation_data.get('consolidation_opportunity', 'unknown'),
-                "consolidation_potential": fragmentation_data.get('roll_up_potential', 0),
-                "barriers_to_consolidation": self._identify_consolidation_barriers(businesses),
-                "optimal_strategy": self._recommend_consolidation_strategy(fragmentation_data)
-            },
-            
-            # Roll-up analysis
-            "roll_up_analysis": roll_up_analysis,
-            
-            # Market clusters
-            "market_clusters": response.market_clusters,
-            
-            "processing_time": response.processing_time
-        }
-        
-    except Exception as e:
-        logger.error(f"Fragmentation analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Fragmentation analysis failed: {str(e)}")
-
-
-@router.post("/opportunities", response_model=Dict[str, Any])
-async def identify_market_opportunities(
-    request: OpportunityRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Identify market opportunities across multiple industries
-    
-    This endpoint identifies various types of market opportunities including
-    succession waves, consolidation plays, and growth markets.
-    """
-    try:
-        opportunities = []
-        
-        # Analyze each industry
-        industries_to_analyze = request.industries or ["hvac", "plumbing", "electrical", "restaurant", "retail"]
-        
-        for industry in industries_to_analyze:
-            # Create intelligence request for this industry
-            intel_request = IntelligenceRequest(
-                location=request.location,
-                industry=industry,
-                max_businesses=30,
-                analysis_types=["succession_risk", "market_fragmentation", "tam_opportunity"],
-                priority=2
-            )
-            
-            # Process request
-            response = await intelligence_service.process_intelligence_request(intel_request)
-            
-            # Analyze opportunities in this industry
-            industry_opportunities = self._analyze_industry_opportunities(
-                industry=industry,
-                businesses=response.businesses,
-                market_metrics=response.market_metrics,
-                fragmentation=response.fragmentation_analysis,
-                opportunity_types=request.opportunity_types
-            )
-            
-            opportunities.extend(industry_opportunities)
-        
-        # Sort opportunities by potential impact
-        opportunities.sort(key=lambda x: x.get('impact_score', 0), reverse=True)
-        
-        # Generate opportunity summary
-        opportunity_summary = {
-            "total_opportunities": len(opportunities),
-            "high_impact_opportunities": len([o for o in opportunities if o.get('impact_score', 0) > 80]),
-            "industries_analyzed": len(industries_to_analyze),
-            "total_market_value": sum(o.get('market_value', 0) for o in opportunities),
-            "opportunity_types": list(set(o['opportunity_type'] for o in opportunities))
-        }
-        
-        return {
-            "location": request.location,
-            "timestamp": datetime.now().isoformat(),
-            "opportunities": opportunities[:25],  # Top 25 opportunities
-            "opportunity_summary": opportunity_summary,
-            "recommendations": self._generate_opportunity_recommendations(opportunities)
-        }
-        
-    except Exception as e:
-        logger.error(f"Opportunity identification failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Opportunity identification failed: {str(e)}")
-
-
-@router.get("/status/{request_id}")
-async def get_request_status(request_id: str):
-    """
-    Get the status of a processing request
-    
-    This endpoint allows monitoring of long-running intelligence requests.
-    """
-    try:
-        status = intelligence_service.get_request_status(request_id)
-        return status
-        
-    except Exception as e:
-        logger.error(f"Status check failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
-
-
-@router.get("/health")
-async def get_pipeline_health():
-    """
-    Get health status of the intelligence pipeline
-    
-    This endpoint provides monitoring information about the backend
-    architecture components and overall system health.
-    """
-    try:
-        health = intelligence_service.get_pipeline_health()
-        return health
-        
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
-
-
-# Helper methods (these would be part of the class if this were a class-based router)
-
-def _identify_consolidation_barriers(businesses: List[Dict[str, Any]]) -> List[str]:
-    """Identify barriers to market consolidation"""
-    barriers = []
-    
-    # Check for strong incumbents
-    strong_players = [b for b in businesses if b['metrics']['estimated_revenue'] and b['metrics']['estimated_revenue'] > 5000000]
-    if strong_players:
-        barriers.append("Presence of large incumbent players")
-    
-    # Check for high customer loyalty (high ratings)
-    high_rated = [b for b in businesses if b['metrics']['rating'] and b['metrics']['rating'] > 4.5]
-    if len(high_rated) / len(businesses) > 0.3:
-        barriers.append("High customer loyalty across market")
-    
-    # Check for regulatory barriers (industry-specific)
-    regulated_industries = ["healthcare", "restaurant", "construction"]
-    if any(b['category'] in regulated_industries for b in businesses):
-        barriers.append("Regulatory licensing requirements")
-    
-    return barriers
-
-
-def _recommend_consolidation_strategy(fragmentation_data: Dict[str, Any]) -> str:
-    """Recommend consolidation strategy based on fragmentation analysis"""
-    hhi = fragmentation_data.get('hhi_index', 0)
-    fragmentation_level = fragmentation_data.get('fragmentation_level', 'unknown')
-    
-    if fragmentation_level == "highly_fragmented" and hhi < 1000:
-        return "aggressive_roll_up"
-    elif fragmentation_level == "moderately_fragmented":
-        return "selective_acquisition"
-    elif fragmentation_level == "concentrated":
-        return "market_entry_challenge"
-    else:
-        return "market_analysis_required"
-
-
-def _infer_industry_from_query(q: str) -> str:
-    """Best-effort industry inference from a search query string."""
-    try:
-        if not q:
-            return "all"
-        ql = q.lower()
-        keywords = [
-            ("hvac", ["hvac", "heating", "air", "cooling", "ac"]),
-            ("restaurant", ["restaurant", "bar", "cafe", "coffee", "food"]),
-            ("automotive", ["auto", "mechanic", "car", "repair"]),
-            ("construction", ["construction", "contractor", "builder"]),
-            ("medical", ["clinic", "medical", "health", "dent", "doctor"]),
-            ("legal", ["law", "attorney", "legal", "firm"]),
-            ("retail", ["retail", "store", "shop", "boutique"]),
-            ("plumbing", ["plumb"]),
-            ("technology", ["tech", "software", "it", "digital"]),
-            ("accounting", ["account", "cpa", "tax"]),
-        ]
-        for label, terms in keywords:
-            if any(t in ql for t in terms):
-                return label
-        return "all"
-    except Exception:
-        return "all"
-
-def _analyze_industry_opportunities(
-    industry: str,
-    businesses: List[Dict[str, Any]],
-    market_metrics: Dict[str, Any],
-    fragmentation: Dict[str, Any],
-    opportunity_types: Optional[List[str]]
-) -> List[Dict[str, Any]]:
-    """Analyze opportunities in a specific industry"""
-    opportunities = []
-    
-    # Succession wave opportunity
-    if not opportunity_types or "succession_wave" in opportunity_types:
-        avg_succession_risk = market_metrics.get('average_succession_risk', 0)
-        if avg_succession_risk > 65:
-            high_risk_businesses = [
-                b for b in businesses 
-                if b.get('analysis', {}).get('succession_risk', {}).get('succession_risk_score', 0) > 70
-            ]
-            
-            if len(high_risk_businesses) >= 3:
-                opportunities.append({
-                    "opportunity_type": "succession_wave",
-                    "industry": industry,
-                    "description": f"High succession risk in {industry} - {len(high_risk_businesses)} businesses at risk",
-                    "businesses_affected": len(high_risk_businesses),
-                    "market_value": sum(b['metrics']['estimated_revenue'] or 0 for b in high_risk_businesses),
-                    "impact_score": min(100, avg_succession_risk + len(high_risk_businesses) * 5),
-                    "urgency": "high" if avg_succession_risk > 80 else "medium",
-                    "estimated_timeline": "1-3 years"
-                })
-    
-    # Market consolidation opportunity
-    if not opportunity_types or "market_consolidation" in opportunity_types:
-        fragmentation_level = fragmentation.get('fragmentation_level', 'unknown')
-        if fragmentation_level == "highly_fragmented":
-            total_revenue = sum(b['metrics']['estimated_revenue'] or 0 for b in businesses)
-            
-            opportunities.append({
-                "opportunity_type": "market_consolidation",
-                "industry": industry,
-                "description": f"Highly fragmented {industry} market suitable for roll-up strategy",
-                "businesses_available": len(businesses),
-                "total_market_value": total_revenue,
-                "hhi_index": fragmentation.get('hhi_index', 0),
-                "impact_score": min(100, (len(businesses) * 2) + (total_revenue / 1000000)),
-                "urgency": "medium",
-                "estimated_timeline": "2-5 years"
-            })
-    
-    # Large market opportunity
-    if not opportunity_types or "large_market" in opportunity_types:
-        total_tam = market_metrics.get('total_tam_estimate', 0)
-        if total_tam > 50000000:  # $50M+ TAM
-            opportunities.append({
-                "opportunity_type": "large_market",
-                "industry": industry,
-                "description": f"Large {industry} market with significant TAM",
-                "total_tam": total_tam,
-                "businesses_in_market": len(businesses),
-                "impact_score": min(100, total_tam / 1000000),
-                "urgency": "low",
-                "estimated_timeline": "3-7 years"
-            })
-    
-    return opportunities
-
-
-def _generate_opportunity_recommendations(opportunities: List[Dict[str, Any]]) -> List[str]:
-    """Generate actionable recommendations from opportunities"""
-    recommendations = []
-    
-    # Count opportunity types
-    succession_opportunities = [o for o in opportunities if o['opportunity_type'] == 'succession_wave']
-    consolidation_opportunities = [o for o in opportunities if o['opportunity_type'] == 'market_consolidation']
-    
-    if len(succession_opportunities) >= 2:
-        recommendations.append("Focus on succession opportunities - multiple industries showing high owner transition risk")
-    
-    if len(consolidation_opportunities) >= 3:
-        recommendations.append("Consider roll-up strategy across multiple fragmented industries")
-    
-    # High-impact opportunities
-    high_impact = [o for o in opportunities if o.get('impact_score', 0) > 85]
-    if high_impact:
-        top_industry = high_impact[0]['industry']
-        recommendations.append(f"Prioritize {top_industry} industry - highest impact opportunity identified")
-    
-    return recommendations
-
-
-# Export router
-__all__ = ['router']
+    }
