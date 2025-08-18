@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     FIRECRAWL_API_KEY: Optional[str] = os.getenv("FIRECRAWL_API_KEY")
     APIFY_TOKEN: Optional[str] = os.getenv("APIFY_TOKEN")
     CRIMEOMETER_API_KEY: Optional[str] = os.getenv("CRIMEOMETER_API_KEY")
+    DATA_AXLE_API_KEY: Optional[str] = os.getenv("DATA_AXLE_API_KEY")
+    ARCGIS_API_KEY: Optional[str] = os.getenv("ARCGIS_API_KEY")
     # LeanGenius
     LEANGENIUS_API_KEY: Optional[str] = os.getenv("LEANGENIUS_API_KEY")
     LEANGENIUS_BASE_URL: str = os.getenv("LEANGENIUS_BASE_URL", "https://api.leangenius.ai")

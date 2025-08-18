@@ -25,239 +25,163 @@ class MarketScanRequest(BaseModel):
 @router.post("/scan")
 async def comprehensive_market_scan(request: MarketScanRequest, background_tasks: BackgroundTasks):
     """
-    Comprehensive market scan using real API aggregation
+    Comprehensive market scan using real API aggregation - fast optimized version
     """
     logger.info(f"Market scan request: {request.location}, industry: {request.industry}")
-    
-    import time
     
     start_time = time.time()
     request_id = f"req_{int(time.time())}_{abs(hash(request.location + str(time.time())))}"
     
-    # Real data aggregation from all available APIs
+    # Fast real data aggregation
     sample_businesses = []
     
     try:
-        from ..crawlers.smart_crawler_hub import SmartCrawlerHub
-        # Initialize crawler hub for real data aggregation
+        from ..crawlers.smart_crawler_hub import SmartCrawlerHub, CrawlerType, CrawlRequest
+        
+        # Initialize crawler hub
         crawler_hub = SmartCrawlerHub()
         
-        # Use all available APIs for comprehensive business discovery
+        # Build search queries
         if not request.industry or request.industry.lower() in ['all', 'all industries', '']:
-            # Multi-industry search for comprehensive coverage
-            search_queries = [
-                f"hvac companies {request.location}",
-                f"restaurants {request.location}",
-                f"auto repair {request.location}",
-                f"construction companies {request.location}",
-                f"medical clinics {request.location}",
-                f"law firms {request.location}",
-                f"retail stores {request.location}",
-                f"plumbing services {request.location}",
-                f"tech companies {request.location}",
-                f"accounting firms {request.location}",
-            ]
+            search_queries = [f"restaurants {request.location}", f"businesses {request.location}"]
         else:
-            # Single industry search with keyword mapping for better results
             ind = (request.industry or '').strip().lower()
             keyword_map = {
-                'electrical': ['electrician', 'electrical contractor'],
-                'hvac': ['hvac', 'heating and air'],
-                'plumbing': ['plumber', 'plumbing company'],
-                'landscaping': ['landscaping', 'lawn care'],
-                'automotive': ['auto repair', 'mechanic'],
-                'construction': ['construction company', 'general contractor'],
-                'restaurant': ['restaurant'],
-                'retail': ['retail store'],
-                'healthcare': ['clinic', 'medical clinic'],
-                'it services': ['it services', 'managed it'],
-                'real estate': ['real estate agency'],
-                'education': ['tutoring center', 'school'],
+                'electrical': 'electrician',
+                'hvac': 'hvac',
+                'plumbing': 'plumber',
+                'landscaping': 'landscaping',
+                'automotive': 'auto repair',
+                'construction': 'construction',
+                'restaurant': 'restaurant',
+                'retail': 'retail store',
+                'healthcare': 'clinic',
             }
-            base_terms = keyword_map.get(ind, [ind or 'business'])
-            search_queries = [f"{t} {request.location}" for t in base_terms]
+            term = keyword_map.get(ind, ind or 'business')
+            search_queries = [f"{term} {request.location}"]
         
-        # Aggregate data from all available sources
+        # Quick Google SERP aggregation with aggressive timeout
         all_businesses = []
-        from ..crawlers.smart_crawler_hub import CrawlerType, CrawlRequest
-        
-                        # 1. Fast API aggregation - prioritize speed over quantity
-        # Use only the most relevant single query for fastest response
-        primary_query = search_queries[0] if search_queries else f"businesses {request.location}"
-        
-        try:
-            # Use asyncio.wait_for for strict timeout control
-            import asyncio
-            
-            async def quick_serp_call():
+        for query in search_queries[:2]:  # Maximum 2 queries for speed
+            try:
                 crawl_req = CrawlRequest(
                     crawler_type=CrawlerType.GOOGLE_SERP,
                     target_url="https://serpapi.com/search.json",
                     search_params={
-                        "query": primary_query,
-                        "industry": request.industry or "",
+                        "query": query,
                         "location": request.location,
-                        "num": 20  # Limit results for speed
+                        "num": 15
                     },
-            priority=1
-        )
-                return await crawler_hub._execute_crawl(crawl_req)
-            
-            # Strict 8-second timeout for the entire SERP call
-            crawl_res = await asyncio.wait_for(quick_serp_call(), timeout=8.0)
-            
-            if crawl_res and crawl_res.success:
-                    # Keep entries with name and address/coords/website
-                    for item in crawl_res.data[:40]:
+                    priority=1
+                )
+                
+                # Apply 3-second timeout for maximum speed
+                crawl_res = await asyncio.wait_for(
+                    crawler_hub._execute_crawl(crawl_req), 
+                    timeout=3.0
+                )
+                
+                if crawl_res and crawl_res.success:
+                    for item in crawl_res.data[:20]:
                         name_val = item.get('name')
-                        addr_val = item.get('address')
-                        if not isinstance(name_val, str):
+                        if not isinstance(name_val, str) or not name_val.strip():
                             continue
-                        name_val = name_val.strip()
-                        if not name_val:
-                            continue
-                        addr_val = (addr_val or '').strip()
-                        looks_like_street = False
-                        if isinstance(addr_val, str) and addr_val:
-                            low = addr_val.lower()
-                            looks_like_street = (any(x in low for x in [' st', ' street', ' ave', ' avenue', ' rd', ' road', ' blvd', ' boulevard', ' dr', ' drive', ' ln', ' lane', ' way', ' ct', ' court']) and any(ch.isdigit() for ch in addr_val[:12]))
-                        has_coords = isinstance(item.get('coordinates'), (list, tuple)) and len(item.get('coordinates')) == 2
-                        website_val = item.get('website', '')
-                        has_site = isinstance(website_val, str) and len(website_val.strip()) > 4
-                        # Accept if street-like OR have coords/site (we can verify client-side)
-                        if not (looks_like_street or has_coords or has_site):
-                            continue
-                        # Clean up website URL
-                        website_clean = website_val.strip() if website_val else ''
-                        if website_clean and not website_clean.startswith(('http://', 'https://')):
-                            website_clean = f"https://{website_clean}"
-                        # Infer industry from query if needed
-                            industry = (request.industry or '').lower()
-                            if not industry:
-                                q_low = query.lower()
-                                if 'hvac' in q_low or 'heating' in q_low or 'air conditioning' in q_low:
-                                    industry = 'hvac'
-                                elif 'restaurant' in q_low or 'cafe' in q_low or 'diner' in q_low:
-                                    industry = 'restaurant'
-                                elif 'auto' in q_low or 'repair' in q_low or 'mechanic' in q_low:
-                                    industry = 'automotive'
-                                elif 'construction' in q_low or 'contractor' in q_low:
-                                    industry = 'construction'
-                                elif 'medical' in q_low or 'clinic' in q_low or 'doctor' in q_low:
-                                    industry = 'healthcare'
-                                elif 'law' in q_low or 'attorney' in q_low or 'legal' in q_low:
-                                    industry = 'legal'
-                                else:
-                                    industry = 'general'
                             
-                            all_businesses.append({
-                                'name': name_val,
-                                'industry': industry,
-                                'address': addr_val,
-                                'phone': item.get('phone'),
-                                'website': website_clean,
-                                'rating': item.get('rating') or 0.0,
-                                'reviews': item.get('review_count') or item.get('reviews') or 0,
-                                'coordinates': item.get('coordinates'),
-                                'source': item.get('source') or crawl_res.source
-                            })
-                            
-        except asyncio.TimeoutError:
-            logger.warning("SERP API call timed out after 8 seconds")
-        except Exception as e:
-            logger.warning(f"SERP search failed: {e}")
+                        addr_val = (item.get('address') or '').strip()
+                        website_val = (item.get('website') or '').strip()
+                        
+                        # Clean website URL
+                        if website_val and not website_val.startswith(('http://', 'https://')):
+                            website_val = f"https://{website_val}"
+                        
+                        # Determine industry
+                        industry = (request.industry or '').lower()
+                        if not industry:
+                            q_low = query.lower()
+                            if 'restaurant' in q_low:
+                                industry = 'restaurant'
+                            elif 'hvac' in q_low:
+                                industry = 'hvac'
+                            elif 'auto' in q_low:
+                                industry = 'automotive'
+                            else:
+                                industry = 'general'
+                        
+                        all_businesses.append({
+                            'name': name_val.strip(),
+                            'industry': industry,
+                            'address': addr_val,
+                            'phone': item.get('phone', ''),
+                            'website': website_val,
+                            'rating': item.get('rating', 0.0),
+                            'reviews': item.get('review_count', 0),
+                            'coordinates': item.get('coordinates'),
+                            'source': 'google_serp'
+                        })
+                        
+            except asyncio.TimeoutError:
+                logger.warning(f"SERP search timed out for '{query}' after 3 seconds")
+            except Exception as e:
+                logger.warning(f"SERP search failed for '{query}': {e}")
         
-                        # Skip secondary APIs for maximum speed - focus on primary SERP only
-
-        # Use real data if available, otherwise fast local business directory
-        if len(all_businesses) >= 1:
-            # Dedupe by (name,address)
+        # Use real data if available
+        if all_businesses:
+            # Quick deduplication
             seen = set()
             deduped = []
             for b in all_businesses:
-                key = (b['name'].lower(), b['address'].lower())
-                if key in seen:
-                    continue
-                seen.add(key)
-                deduped.append(b)
+                key = b['name'].lower()
+                if key not in seen:
+                    seen.add(key)
+                    deduped.append(b)
             sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
         else:
-            # Return empty result if no real data found - strict API-only mode
-            logger.warning("No real business data found from any API source")
+            logger.warning("No real business data found - returning empty result")
             sample_businesses = []
-        
+            
     except Exception as e:
         logger.error(f"Real data aggregation failed: {e}")
         sample_businesses = []
     
-    # Step 2: Normalize business data
+    # Fast normalization
     businesses = []
     
-    # Limit businesses based on request
-    max_businesses = min(request.max_businesses or 20, 50)  # Cap at 50 max
-    sample_businesses = sample_businesses[:max_businesses]
-    
-    def _parse_city_state_zip(addr_text: str):
-        try:
-            parts = [p.strip() for p in (addr_text or "").split(',') if p and p.strip()]
-            line1 = None; city = None; state = None; zip_code = None
-            
-            if len(parts) >= 1:
-                line1 = parts[0].strip()
-            
-            if len(parts) >= 2:
-                tail = ','.join(parts[1:])
-                import re
-                m = re.search(r"([A-Za-z .'-]+),?\s*([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?", tail)
-                if m:
-                    city = m.group(1).strip()
-                    state = m.group(2).strip()
-                    zip_code = m.group(3).strip() if m.group(3) else None
-                elif len(parts) >= 3:
-                    city = parts[1].strip()
-                    state_zip = parts[2].strip()
-                    szm = re.search(r"^([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?", state_zip)
-                    if szm:
-                        state = szm.group(1)
-                        zip_code = szm.group(2) if szm.group(2) else None
-                elif len(parts) == 2:
-                    # Try to parse "City, State" format
-                    city_state = parts[1].strip()
-                    csm = re.search(r"^([A-Za-z .'-]+),?\s*([A-Z]{2})$", city_state)
-                    if csm:
-                        city = csm.group(1).strip()
-                        state = csm.group(2).strip()
-            
-            return line1, city, state, zip_code
-        except Exception:
-            return None, None, None, None
-
-
+    def _parse_address(addr_text: str):
+        """Quick address parsing"""
+        parts = [p.strip() for p in (addr_text or "").split(',') if p.strip()]
+        line1 = parts[0] if parts else ''
+        city = parts[1] if len(parts) > 1 else ''
+        state_zip = parts[2] if len(parts) > 2 else ''
+        
+        # Extract state and zip from last part
+        state = ''
+        zip_code = ''
+        if state_zip:
+            import re
+            match = re.search(r'([A-Z]{2})\s*(\d{5})', state_zip)
+            if match:
+                state = match.group(1)
+                zip_code = match.group(2)
+        
+        return line1, city, state, zip_code
 
     for i, biz in enumerate(sample_businesses):
         try:
-            # Parse address
-            line1, city, state, zip_code = _parse_city_state_zip(biz.get('address', ''))
+            line1, city, state, zip_code = _parse_address(biz.get('address', ''))
             
-            # Estimate revenue based on rating, reviews, and industry
-            rating = biz.get('rating', 0.0)
-            reviews = biz.get('reviews', 0)
+            rating = biz.get('rating', 0.0) or 0.0
+            reviews = biz.get('reviews', 0) or 0
+            
+            # Quick revenue estimation
             base_revenue = max(250000, reviews * 2000 + rating * 50000)
             min_revenue = int(base_revenue * 0.7)
             max_revenue = int(base_revenue * 1.5)
             
-            # Estimate other metrics
-            employee_count = max(3, min(25, int(base_revenue / 80000)))
-            years_in_business = max(2, min(20, int(reviews / 10 + rating)))
-            lead_score = min(100, max(20, int(rating * 15 + min(reviews, 50))))
-            owner_age = 35 + int((reviews % 20) + (rating * 3))
-            num_locations = 1 if reviews < 100 else (2 if reviews < 300 else 3)
-            
             normalized = {
-                'business_id': biz.get('business_id') or biz.get('place_id') or biz.get('data_id') or f"raw_{i}_{hash(str(biz))}",
+                'business_id': f"fast_{i}_{hash(str(biz))}",
                 'name': biz.get('name', 'Unknown Business'),
-                'category': biz.get('industry', request.industry or 'hvac'),
-                'industry': biz.get('industry', request.industry or 'hvac'),
+                'category': biz.get('industry', request.industry or 'general'),
+                'industry': biz.get('industry', request.industry or 'general'),
                 'address': {
                     'formatted_address': biz.get('address', ''),
                     'line1': line1,
@@ -268,7 +192,7 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                 },
                 'contact': {
                     'phone': biz.get('phone', ''),
-                    'email': None,  # Explicitly set to None, can be enriched later
+                    'email': None,
                     'website': biz.get('website', ''),
                     'phone_valid': bool(biz.get('phone')),
                     'email_valid': False,
@@ -280,16 +204,16 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                     'estimated_revenue': base_revenue,
                     'min_revenue': min_revenue,
                     'max_revenue': max_revenue,
-                    'employee_count': employee_count,
-                    'years_in_business': years_in_business,
-                    'lead_score': lead_score,
-                    'owner_age': owner_age,
-                    'num_locations': num_locations
+                    'employee_count': max(3, min(25, int(base_revenue / 80000))),
+                    'years_in_business': max(2, min(20, int(reviews / 10 + rating))),
+                    'lead_score': min(100, max(20, int(rating * 15 + min(reviews, 50)))),
+                    'owner_age': 35 + int((reviews % 20) + (rating * 3)),
+                    'num_locations': 1 if reviews < 100 else 2
                 },
-                'data_quality': 'high' if biz.get('source') in ['google_serp', 'yelp'] else 'medium',
-                'data_sources': [biz.get('source', 'unknown')] if biz.get('source') else ['api_aggregated'],
+                'data_quality': 'high',
+                'data_sources': [biz.get('source', 'api_aggregated')],
                 'last_updated': datetime.now().isoformat(),
-                'tags': ['real_data', 'api_verified']
+                'tags': ['real_data', 'fast_api']
             }
             businesses.append(normalized)
         except Exception as parse_e:
@@ -299,8 +223,8 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
     end_time = time.time()
     duration = end_time - start_time
     
-    logger.info(f"Market scan completed in {duration:.2f}s, found {len(businesses)} businesses")
-        
+    logger.info(f"Fast market scan completed in {duration:.2f}s, found {len(businesses)} businesses")
+    
     return {
         "success": True,
         "request_id": request_id,
@@ -311,12 +235,12 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
             "industry": request.industry or "all",
             "radius_miles": request.radius_miles,
             "search_duration_seconds": duration,
-            "data_sources": list(set([b.get('data_sources', ['unknown'])[0] for b in businesses if b.get('data_sources')]))
+            "data_sources": ['google_serp']
         },
         "metadata": {
             "timestamp": datetime.now().isoformat(),
             "processing_time_ms": int(duration * 1000),
-            "api_version": "2.0",
+            "api_version": "2.1_fast",
             "real_data_only": True
         }
     }
