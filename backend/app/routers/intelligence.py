@@ -81,31 +81,41 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
         all_businesses = []
         from ..crawlers.smart_crawler_hub import CrawlerType, CrawlRequest
         
-                # 1. Google SERP aggregation - optimized for speed
-        for query in search_queries[:3]:  # Reduced to 3 queries for faster response
-            try:
+                        # 1. Fast API aggregation - prioritize speed over quantity
+        # Use only the most relevant single query for fastest response
+        primary_query = search_queries[0] if search_queries else f"businesses {request.location}"
+        
+        try:
+            # Use asyncio.wait_for for strict timeout control
+            import asyncio
+            
+            async def quick_serp_call():
                 crawl_req = CrawlRequest(
                     crawler_type=CrawlerType.GOOGLE_SERP,
                     target_url="https://serpapi.com/search.json",
                     search_params={
-                        "query": query,
+                        "query": primary_query,
                         "industry": request.industry or "",
                         "location": request.location,
-                        "timeout": 10  # Add timeout for faster response
+                        "num": 20  # Limit results for speed
                     },
             priority=1
         )
-                crawl_res = await crawler_hub._execute_crawl(crawl_req)
-                if crawl_res and crawl_res.success:
+                return await crawler_hub._execute_crawl(crawl_req)
+            
+            # Strict 8-second timeout for the entire SERP call
+            crawl_res = await asyncio.wait_for(quick_serp_call(), timeout=8.0)
+            
+            if crawl_res and crawl_res.success:
                     # Keep entries with name and address/coords/website
                     for item in crawl_res.data[:40]:
                         name_val = item.get('name')
                         addr_val = item.get('address')
                         if not isinstance(name_val, str):
-                continue
+                            continue
                         name_val = name_val.strip()
                         if not name_val:
-                continue
+                            continue
                         addr_val = (addr_val or '').strip()
                         looks_like_street = False
                         if isinstance(addr_val, str) and addr_val:
@@ -116,12 +126,12 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                         has_site = isinstance(website_val, str) and len(website_val.strip()) > 4
                         # Accept if street-like OR have coords/site (we can verify client-side)
                         if not (looks_like_street or has_coords or has_site):
-                continue
+                            continue
                         # Clean up website URL
                         website_clean = website_val.strip() if website_val else ''
                         if website_clean and not website_clean.startswith(('http://', 'https://')):
                             website_clean = f"https://{website_clean}"
-                                                    # Infer industry from query if needed
+                        # Infer industry from query if needed
                             industry = (request.industry or '').lower()
                             if not industry:
                                 q_low = query.lower()
@@ -151,84 +161,13 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                                 'coordinates': item.get('coordinates'),
                                 'source': item.get('source') or crawl_res.source
                             })
-            except Exception as e:
-                logger.warning(f"SERP search failed for '{query}': {e}")
+                            
+        except asyncio.TimeoutError:
+            logger.warning("SERP API call timed out after 8 seconds")
+        except Exception as e:
+            logger.warning(f"SERP search failed: {e}")
         
-                # 2. Google Maps (Apify) aggregation if insufficient results
-        if len(all_businesses) < 10:
-            try:
-                apify_req = CrawlRequest(
-                    crawler_type=CrawlerType.APIFY_GMAPS,
-                    target_url="apify://apify/google-maps-scraper",
-                    search_params={
-                        'search': f"{(base_terms[0] if (request and request.industry) else 'business')} {request.location}",
-                        'maxCrawledPlacesPerSearch': 20,  # Reduced for speed
-                        'timeout': 15
-                    },
-                    priority=1
-                )
-                apify_res = await crawler_hub._execute_crawl(apify_req)
-                if apify_res and apify_res.success:
-                    for it in apify_res.data[:20]:
-                        n = it.get('name')
-                        a = it.get('address')
-                        if isinstance(n, str) and n.strip():
-                            website_val = it.get('website', '')
-                            website_clean = website_val.strip() if website_val else ''
-                            if website_clean and not website_clean.startswith(('http://', 'https://')):
-                                website_clean = f"https://{website_clean}"
-                            all_businesses.append({
-                                'name': n.strip(),
-                                'industry': (request.industry or '').lower() or 'all',
-                                'address': a.strip() if isinstance(a, str) else '',
-                                'phone': it.get('phone'),
-                                'website': website_clean,
-                                'rating': it.get('rating') or 0.0,
-                                'reviews': it.get('review_count') or it.get('reviews') or 0,
-                                'coordinates': it.get('coordinates'),
-                                'source': it.get('source') or 'apify_gmaps'
-                            })
-            except Exception as ap_e:
-                logger.warning(f"Apify GMaps fallback failed: {ap_e}")
-        
-                # 3. Yelp aggregation for additional data
-        if len(all_businesses) < 5:
-            try:
-                yelp_req = CrawlRequest(
-                    crawler_type=CrawlerType.YELP,
-                    target_url="https://api.yelp.com/v3/businesses/search",
-                    search_params={
-                        "location": request.location,
-                        "term": (base_terms[0] if (request and request.industry) else 'business'),
-                        "limit": 10,  # Reduced for speed
-                        "timeout": 10
-                    },
-                    priority=1
-                )
-                yelp_res = await crawler_hub._execute_crawl(yelp_req)
-                if yelp_res and yelp_res.success:
-                    for yelp_item in yelp_res.data[:15]:
-                        y_name = yelp_item.get('name')
-                        if isinstance(y_name, str) and y_name.strip():
-                            y_addr = yelp_item.get('location', {}).get('display_address', [])
-                            y_addr_str = ', '.join(y_addr) if isinstance(y_addr, list) else str(y_addr) if y_addr else ''
-                            website_val = yelp_item.get('url', '')
-                            website_clean = website_val.strip() if website_val else ''
-                            if website_clean and not website_clean.startswith(('http://', 'https://')):
-                                website_clean = f"https://{website_clean}"
-                            all_businesses.append({
-                                'name': y_name.strip(),
-                                'industry': (request.industry or '').lower() or 'all',
-                                'address': y_addr_str,
-                                'phone': yelp_item.get('phone'),
-                                'website': website_clean,
-                                'rating': yelp_item.get('rating') or 0.0,
-                                'reviews': yelp_item.get('review_count') or 0,
-                                'coordinates': [yelp_item.get('coordinates', {}).get('latitude'), yelp_item.get('coordinates', {}).get('longitude')] if yelp_item.get('coordinates') else None,
-                                'source': 'yelp'
-                            })
-            except Exception as yelp_e:
-                logger.warning(f"Yelp aggregation failed: {yelp_e}")
+                        # Skip secondary APIs for maximum speed - focus on primary SERP only
 
         # Use real data if available, otherwise fast local business directory
         if len(all_businesses) >= 1:
@@ -362,7 +301,7 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
     
     logger.info(f"Market scan completed in {duration:.2f}s, found {len(businesses)} businesses")
         
-        return {
+    return {
         "success": True,
         "request_id": request_id,
         "businesses": businesses,
