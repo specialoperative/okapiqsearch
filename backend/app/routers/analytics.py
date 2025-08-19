@@ -681,9 +681,9 @@ async def get_crime_tiles(
                                     if 0 <= heat_px < tile_size and 0 <= heat_py < tile_size:
                                         distance = math.sqrt(dx*dx + dy*dy)
                                         if distance <= radius:
-                                            # Much stronger heat contribution for visibility
+                                            # MAXIMUM heat contribution for crime visibility
                                             sigma = radius / 2.0  # Slightly tighter for more intensity
-                                            heat_value = intensity * math.exp(-(distance**2) / (2 * sigma**2)) * 50.0  # Boosted multiplier
+                                            heat_value = intensity * math.exp(-(distance**2) / (2 * sigma**2)) * 100.0  # MAXIMUM multiplier
                                             heat_array[heat_py, heat_px] += heat_value
                 
                 # Aggressive normalization for maximum visibility
@@ -701,26 +701,26 @@ async def get_crime_tiles(
                     for x_idx in range(tile_size):
                         heat_val = heat_array[y_idx, x_idx]
                         if heat_val > 0.0001:  # Extremely low threshold to catch all crime data
-                            # Maximum visibility color mapping - much brighter than test tiles
+                            # MAXIMUM VISIBILITY - Extremely bright colors for all crime data
                             if heat_val < 0.1:
-                                # Super bright red for lowest intensity - even brighter than test
-                                red, green, blue = 255, 20, 20  # Brighter than test tiles
+                                # Maximum red for lowest intensity
+                                red, green, blue = 255, 0, 0  # Pure bright red
                                 alpha = 255  # Fully opaque
                             elif heat_val < 0.3:
-                                # Ultra bright red for moderate crime
-                                red, green, blue = 255, 60, 60  # Very bright red
+                                # Bright red for moderate crime
+                                red, green, blue = 255, 30, 0  # Bright red-orange
                                 alpha = 255  # Fully opaque
                             elif heat_val < 0.5:
-                                # Red-orange transition  
-                                red, green, blue = 255, 120, 20  # Bright orange-red
+                                # Orange for higher crime
+                                red, green, blue = 255, 100, 0  # Bright orange
                                 alpha = 255  # Fully opaque
                             elif heat_val < 0.7:
-                                # Orange for high crime
-                                red, green, blue = 255, 200, 20  # Bright orange
+                                # Yellow-orange for high crime
+                                red, green, blue = 255, 180, 0  # Bright yellow-orange
                                 alpha = 255  # Fully opaque
                             else:
-                                # Bright yellow for maximum crime intensity
-                                red, green, blue = 255, 255, 20  # Bright yellow
+                                # Pure yellow for maximum crime intensity
+                                red, green, blue = 255, 255, 0  # Bright yellow
                                 alpha = 255  # Fully opaque
                             
                             colored_data[y_idx, x_idx] = [red, green, blue, alpha]
