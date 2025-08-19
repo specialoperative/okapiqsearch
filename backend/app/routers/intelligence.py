@@ -72,8 +72,8 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                         "location": request.location,
                         "num": 15
                     },
-                    priority=1
-                )
+            priority=1
+        )
                 
                 # Apply 3-second timeout for maximum speed
                 crawl_res = await asyncio.wait_for(
@@ -138,7 +138,7 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
         else:
             logger.warning("No real business data found - returning empty result")
             sample_businesses = []
-            
+        
     except Exception as e:
         logger.error(f"Real data aggregation failed: {e}")
         sample_businesses = []
@@ -224,8 +224,8 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
     duration = end_time - start_time
     
     logger.info(f"Fast market scan completed in {duration:.2f}s, found {len(businesses)} businesses")
-    
-    return {
+        
+        return {
         "success": True,
         "request_id": request_id,
         "businesses": businesses,

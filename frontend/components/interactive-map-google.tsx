@@ -23,6 +23,35 @@ type InteractiveMapProps = {
   crimeDaysBack?: number;
 };
 
+const getCityCenter = (cityName: string): [number, number] => {
+  const cityCoordinates: Record<string, [number, number]> = {
+    "san francisco": [37.7749, -122.4194],
+    "new york city": [40.7128, -73.9442],
+    "los angeles": [34.0522, -118.2437],
+    "chicago": [41.8781, -87.6298],
+    "houston": [29.7604, -95.3698],
+    "phoenix": [33.4484, -112.0740],
+    "philadelphia": [39.9526, -75.1652],
+    "san antonio": [29.4241, -98.4936],
+    "san diego": [32.7157, -117.1611],
+    "dallas": [32.7767, -96.7970],
+    "austin": [30.2672, -97.7431],
+    "charlotte": [35.2271, -80.8431],
+    "indianapolis": [39.7684, -86.1581],
+    "san jose": [37.3382, -121.8863],
+    "seattle": [47.6062, -122.3321],
+    "denver": [39.7392, -104.9903],
+    "oklahoma city": [35.4676, -97.5164],
+    "nashville": [36.1627, -86.7816],
+    "el paso": [31.7619, -106.4850],
+    "washington d.c.": [38.9072, -77.0369],
+    "boston": [42.3601, -71.0589],
+    "las vegas": [36.1699, -115.1398]
+  };
+  
+  return cityCoordinates[cityName.toLowerCase()] || [37.7749, -122.4194]; // Default to SF
+};
+
 const loadGoogleMaps = async (apiKey: string): Promise<any> => {
   if (typeof window !== "undefined" && (window as any).google?.maps) {
     return (window as any).google;
@@ -53,7 +82,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     { id: 2, name: "Bay Area Plumbing Co", position: [37.7849, -122.4094], tam: "$8M TAM", score: 88 },
     { id: 3, name: "SF Electrical Services", position: [37.7649, -122.4294], tam: "$15M TAM", score: 85 }
   ],
-  center = [37.7749, -122.4194],
+  center,
   heightClassName = "h-96",
   onBusinessClick,
   showHeat = false,
@@ -72,11 +101,14 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     if (center && Array.isArray(center) && typeof center[0] === "number" && typeof center[1] === "number") {
       return center;
     }
+    if (crimeCity) {
+      return getCityCenter(crimeCity);
+    }
     if (businesses && businesses.length > 0) {
       return businesses[0].position;
     }
     return [37.7749, -122.4194];
-  }, [center, businesses]);
+  }, [center, crimeCity, businesses]);
 
   // Initial load
   useEffect(() => {
@@ -122,7 +154,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
               const numTiles = 1 << z;
               const x = ((coord.x % numTiles) + numTiles) % numTiles;
               const y = coord.y;
-              const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}?city=${encodeURIComponent("San Francisco")}`;
+              const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}?city=${encodeURIComponent(crimeCity || "San Francisco")}`;
               return url;
             }
           });
@@ -196,7 +228,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             const numTiles = 1 << z;
             const x = ((coord.x % numTiles) + numTiles) % numTiles;
             const y = coord.y;
-            const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}?city=${encodeURIComponent("San Francisco")}`;
+            const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}?city=${encodeURIComponent(crimeCity || "San Francisco")}`;
             return url;
           }
         });
