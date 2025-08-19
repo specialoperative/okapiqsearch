@@ -23,37 +23,41 @@ type InteractiveMapProps = {
   crimeDaysBack?: number;
 };
 
-const getCityCenter = (cityName: string): [number, number] => {
-  const cityCoordinates: Record<string, [number, number]> = {
-    "san francisco": [37.7749, -122.4194],
-    "new york city": [40.7128, -73.9442],
-    "los angeles": [34.0522, -118.2437],
-    "chicago": [41.8781, -87.6298],
-    "houston": [29.7604, -95.3698],
-    "phoenix": [33.4484, -112.0740],
-    "philadelphia": [39.9526, -75.1652],
-    "san antonio": [29.4241, -98.4936],
-    "san diego": [32.7157, -117.1611],
-    "dallas": [32.7767, -96.7970],
-    "austin": [30.2672, -97.7431],
-    "charlotte": [35.2271, -80.8431],
-    "indianapolis": [39.7684, -86.1581],
-    "san jose": [37.3382, -121.8863],
-    "seattle": [47.6062, -122.3321],
-    "denver": [39.7392, -104.9903],
-    "oklahoma city": [35.4676, -97.5164],
-    "nashville": [36.1627, -86.7816],
-    "jacksonville": [30.3322, -81.6557],
-    "fort worth": [32.7555, -97.3308],
-    "columbus": [39.9612, -82.9988],
-    "sacramento": [38.5816, -121.4944],
-    "el paso": [31.7619, -106.4850],
-    "washington d.c.": [38.9072, -77.0369],
-    "boston": [42.3601, -71.0589],
-    "las vegas": [36.1699, -115.1398]
-  };
-  
-  return cityCoordinates[cityName.toLowerCase()] || [37.7749, -122.4194]; // Default to SF
+// City center coordinates for auto-centering
+const CITY_CENTERS: Record<string, [number, number]> = {
+  "us": [39.8283, -98.5795], // Geographic center of US
+  "United States": [39.8283, -98.5795],
+  "San Francisco": [37.7749, -122.4194],
+  "New York City": [40.7128, -74.0060],
+  "Los Angeles": [34.0522, -118.2437],
+  "Chicago": [41.8781, -87.6298],
+  "Houston": [29.7604, -95.3698],
+  "Phoenix": [33.4484, -112.0740],
+  "Philadelphia": [39.9526, -75.1652],
+  "San Antonio": [29.4241, -98.4936],
+  "San Diego": [32.7157, -117.1611],
+  "Dallas": [32.7767, -96.7970],
+  "Austin": [30.2672, -97.7431],
+  "Seattle": [47.6062, -122.3321],
+  "Denver": [39.7392, -104.9903],
+  "Oklahoma City": [35.4676, -97.5164],
+  "Nashville": [36.1627, -86.7816],
+  "Jacksonville": [30.3322, -81.6557],
+  "Fort Worth": [32.7555, -97.3308],
+  "Columbus": [39.9612, -82.9988],
+  "Sacramento": [38.5816, -121.4944],
+  "El Paso": [31.7619, -106.4850],
+  "Washington D.C.": [38.9072, -77.0369],
+  "Boston": [42.3601, -71.0589],
+  "Las Vegas": [36.1699, -115.1398],
+  "San Jose": [37.3382, -121.8863],
+  "Charlotte": [35.2271, -80.8431],
+  "Indianapolis": [39.7684, -86.1581],
+  "Memphis": [35.1495, -90.0490],
+  "Nashville": [36.1627, -86.7816],
+  "St Louis": [38.6270, -90.1994],
+  "New Orleans": [29.9511, -90.0715],
+  "Detroit": [42.3314, -83.0458],
 };
 
 const loadGoogleMaps = async (apiKey: string): Promise<any> => {
@@ -86,7 +90,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     { id: 2, name: "Bay Area Plumbing Co", position: [37.7849, -122.4094], tam: "$8M TAM", score: 88 },
     { id: 3, name: "SF Electrical Services", position: [37.7649, -122.4294], tam: "$15M TAM", score: 85 }
   ],
-  center,
+  center = [37.7749, -122.4194],
   heightClassName = "h-96",
   onBusinessClick,
   showHeat = false,
@@ -102,17 +106,18 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   const overlayRef = useRef<any | null>(null);
 
   const computedCenter = useMemo<[number, number]>(() => {
+    // Use city center if crimeCity is specified
+    if (crimeCity && CITY_CENTERS[crimeCity]) {
+      return CITY_CENTERS[crimeCity];
+    }
     if (center && Array.isArray(center) && typeof center[0] === "number" && typeof center[1] === "number") {
       return center;
-    }
-    if (crimeCity) {
-      return getCityCenter(crimeCity);
     }
     if (businesses && businesses.length > 0) {
       return businesses[0].position;
     }
     return [37.7749, -122.4194];
-  }, [center, crimeCity, businesses]);
+  }, [center, businesses, crimeCity]);
 
   // Initial load
   useEffect(() => {

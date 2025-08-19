@@ -32,7 +32,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
   const [heatPoints, setHeatPoints] = useState<{ position:[number,number]; intensity?: number }[]>([]);
   const cityOptions = [
     'United States',
-    'New York City','Los Angeles','Chicago','Houston','Phoenix','Philadelphia','San Antonio','San Diego','Dallas','San Jose','Austin','Jacksonville','Fort Worth','Columbus','Charlotte','Indianapolis','San Francisco','Seattle','Denver','Oklahoma City','Nashville','Sacramento','El Paso','Washington D.C.','Boston','Las Vegas'
+    'New York City','Los Angeles','Chicago','Houston','Phoenix','Philadelphia','San Antonio','San Diego','Dallas','San Jose','Austin','Jacksonville','Fort Worth','Columbus','Charlotte','Indianapolis','San Francisco','Seattle','Denver','Oklahoma City','Nashville','Sacramento','El Paso','Washington D.C.','Boston','Las Vegas','Memphis','St Louis','New Orleans','Detroit'
   ];
   const [selectedCity, setSelectedCity] = useState<string>('United States');
 
