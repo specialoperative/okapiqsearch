@@ -46,7 +46,11 @@ const getCityCenter = (cityName: string): [number, number] => {
     "el paso": [31.7619, -106.4850],
     "washington d.c.": [38.9072, -77.0369],
     "boston": [42.3601, -71.0589],
-    "las vegas": [36.1699, -115.1398]
+    "las vegas": [36.1699, -115.1398],
+    "jacksonville": [30.3322, -81.6557],
+    "fort worth": [32.7555, -97.3308],
+    "columbus": [39.9612, -82.9988],
+    "sacramento": [38.5816, -121.4944]
   };
   
   return cityCoordinates[cityName.toLowerCase()] || [37.7749, -122.4194]; // Default to SF
