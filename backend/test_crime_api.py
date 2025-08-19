@@ -240,87 +240,247 @@ def get_city_crime_data(city_name):
                 (30.4405, -97.7431, "Georgetown"),
                 (30.2672, -97.6245, "Del Valle"),
             ]
-        },
-        "jacksonville": {
-            "high_crime": [
-                (30.3322, -81.6557, "Downtown Jacksonville"),
-                (30.3078, -81.6983, "Riverside"),
-                (30.3678, -81.7103, "Northwest Jacksonville"),
-                (30.2881, -81.6557, "San Marco"),
-            ],
-            "medium_crime": [
-                (30.3322, -81.5557, "Beaches"),
-                (30.4322, -81.6557, "North Jacksonville"),
-                (30.3678, -81.5557, "Arlington"),
-                (30.2881, -81.7103, "Westside"),
-            ],
-            "low_crime": [
-                (30.2881, -81.5557, "Southside"),
-                (30.4678, -81.6557, "Ponte Vedra"),
-                (30.3322, -81.4557, "Atlantic Beach"),
-                (30.4322, -81.5557, "Fernandina Beach"),
-            ]
-        },
-        "fort worth": {
-            "high_crime": [
-                (32.7555, -97.3308, "Downtown Fort Worth"),
-                (32.7235, -97.3628, "South Fort Worth"),
-                (32.7875, -97.3628, "East Fort Worth"),
-                (32.7235, -97.2988, "Southeast Fort Worth"),
-            ],
-            "medium_crime": [
-                (32.7875, -97.2988, "North Fort Worth"),
-                (32.7555, -97.2308, "Northeast Fort Worth"),
-                (32.6875, -97.3308, "Southwest Fort Worth"),
-                (32.7555, -97.4308, "West Fort Worth"),
-            ],
-            "low_crime": [
-                (32.8235, -97.3308, "Keller"),
-                (32.7875, -97.2000, "Colleyville"),
-                (32.6875, -97.2308, "Burleson"),
-                (32.8555, -97.2988, "Southlake"),
-            ]
-        },
-        "columbus": {
-            "high_crime": [
-                (39.9612, -82.9988, "Downtown Columbus"),
-                (39.9292, -83.0308, "South Columbus"),
-                (39.9932, -83.0308, "North Columbus"),
-                (39.9292, -82.9668, "East Columbus"),
-            ],
-            "medium_crime": [
-                (39.9932, -82.9668, "Worthington"),
-                (39.9612, -82.8988, "New Albany"),
-                (39.8932, -82.9988, "Grove City"),
-                (39.9612, -83.0988, "Hilliard"),
-            ],
-            "low_crime": [
-                (40.0292, -82.9988, "Delaware"),
-                (39.9932, -82.8668, "Pickerington"),
-                (39.8612, -82.9668, "Lancaster"),
-                (40.0612, -83.0308, "Dublin"),
-            ]
-        },
-        "sacramento": {
-            "high_crime": [
-                (38.5816, -121.4944, "Downtown Sacramento"),
-                (38.5496, -121.5264, "South Sacramento"),
-                (38.6136, -121.5264, "North Sacramento"),
-                (38.5496, -121.4624, "East Sacramento"),
-            ],
-            "medium_crime": [
-                (38.6136, -121.4624, "Natomas"),
-                (38.5816, -121.3944, "Rancho Cordova"),
-                (38.5136, -121.4944, "Elk Grove"),
-                (38.5816, -121.5944, "West Sacramento"),
-            ],
-            "low_crime": [
-                (38.6496, -121.4944, "Roseville"),
-                (38.6136, -121.3624, "Folsom"),
-                (38.4816, -121.4624, "Galt"),
-                (38.7136, -121.4944, "Lincoln"),
-            ]
-        }
+                  },
+          "charlotte": {
+              "high_crime": [
+                  (35.2271, -80.8431, "Downtown Charlotte"),
+                  (35.1971, -80.8751, "West Charlotte"),
+                  (35.2571, -80.8751, "North Charlotte"),
+                  (35.1971, -80.8111, "East Charlotte"),
+              ],
+              "medium_crime": [
+                  (35.2571, -80.8111, "University Area"),
+                  (35.2271, -80.7431, "Matthews"),
+                  (35.1651, -80.8431, "South Charlotte"),
+                  (35.2271, -80.9431, "Huntersville"),
+              ],
+              "low_crime": [
+                  (35.2891, -80.8431, "Cornelius"),
+                  (35.2571, -80.7111, "Mint Hill"),
+                  (35.1351, -80.8111, "Pineville"),
+                  (35.3271, -80.8751, "Davidson"),
+              ]
+          },
+          "indianapolis": {
+              "high_crime": [
+                  (39.7684, -86.1581, "Downtown Indianapolis"),
+                  (39.7364, -86.1901, "West Indianapolis"),
+                  (39.8004, -86.1901, "North Indianapolis"),
+                  (39.7364, -86.1261, "East Indianapolis"),
+              ],
+              "medium_crime": [
+                  (39.8004, -86.1261, "Broad Ripple"),
+                  (39.7684, -86.0581, "Fishers"),
+                  (39.7044, -86.1581, "Greenwood"),
+                  (39.7684, -86.2581, "Speedway"),
+              ],
+              "low_crime": [
+                  (39.8364, -86.1581, "Carmel"),
+                  (39.8004, -86.0261, "Noblesville"),
+                  (39.6684, -86.1261, "Franklin"),
+                  (39.9004, -86.1901, "Zionsville"),
+              ]
+          },
+          "san jose": {
+              "high_crime": [
+                  (37.3382, -121.8863, "Downtown San Jose"),
+                  (37.3062, -121.9183, "West San Jose"),
+                  (37.3702, -121.9183, "North San Jose"),
+                  (37.3062, -121.8543, "East San Jose"),
+              ],
+              "medium_crime": [
+                  (37.3702, -121.8543, "Milpitas"),
+                  (37.3382, -121.7863, "Evergreen"),
+                  (37.2742, -121.8863, "South San Jose"),
+                  (37.3382, -121.9863, "Cupertino"),
+              ],
+              "low_crime": [
+                  (37.4062, -121.8863, "Santa Clara"),
+                  (37.3702, -121.7543, "Alum Rock"),
+                  (37.2382, -121.8543, "Morgan Hill"),
+                  (37.4382, -121.9183, "Sunnyvale"),
+              ]
+          },
+          "seattle": {
+              "high_crime": [
+                  (47.6062, -122.3321, "Downtown Seattle"),
+                  (47.5742, -122.3641, "South Seattle"),
+                  (47.6382, -122.3641, "North Seattle"),
+                  (47.5742, -122.3001, "East Seattle"),
+              ],
+              "medium_crime": [
+                  (47.6382, -122.3001, "University District"),
+                  (47.6062, -122.2321, "Bellevue"),
+                  (47.5422, -122.3321, "Renton"),
+                  (47.6062, -122.4321, "West Seattle"),
+              ],
+              "low_crime": [
+                  (47.6742, -122.3321, "Shoreline"),
+                  (47.6382, -122.2001, "Redmond"),
+                  (47.5062, -122.3001, "Tukwila"),
+                  (47.7062, -122.3641, "Lynnwood"),
+              ]
+          },
+          "denver": {
+              "high_crime": [
+                  (39.7392, -104.9903, "Downtown Denver"),
+                  (39.7072, -105.0223, "West Denver"),
+                  (39.7712, -105.0223, "North Denver"),
+                  (39.7072, -104.9583, "East Denver"),
+              ],
+              "medium_crime": [
+                  (39.7712, -104.9583, "Commerce City"),
+                  (39.7392, -104.8903, "Aurora"),
+                  (39.6752, -104.9903, "Littleton"),
+                  (39.7392, -105.0903, "Lakewood"),
+              ],
+              "low_crime": [
+                  (39.8072, -104.9903, "Westminster"),
+                  (39.7712, -104.8583, "Centennial"),
+                  (39.6392, -104.9583, "Highlands Ranch"),
+                  (39.8392, -105.0223, "Arvada"),
+              ]
+          },
+          "oklahoma city": {
+              "high_crime": [
+                  (35.4676, -97.5164, "Downtown Oklahoma City"),
+                  (35.4356, -97.5484, "Southwest OKC"),
+                  (35.4996, -97.5484, "Northwest OKC"),
+                  (35.4356, -97.4844, "Southeast OKC"),
+              ],
+              "medium_crime": [
+                  (35.4996, -97.4844, "North OKC"),
+                  (35.4676, -97.4164, "Midwest City"),
+                  (35.4036, -97.5164, "Moore"),
+                  (35.4676, -97.6164, "Yukon"),
+              ],
+              "low_crime": [
+                  (35.5356, -97.5164, "Edmond"),
+                  (35.4996, -97.3844, "Del City"),
+                  (35.3676, -97.4844, "Norman"),
+                  (35.5676, -97.5484, "Nichols Hills"),
+              ]
+          },
+          "nashville": {
+              "high_crime": [
+                  (36.1627, -86.7816, "Downtown Nashville"),
+                  (36.1307, -86.8136, "South Nashville"),
+                  (36.1947, -86.8136, "North Nashville"),
+                  (36.1307, -86.7496, "East Nashville"),
+              ],
+              "medium_crime": [
+                  (36.1947, -86.7496, "Goodlettsville"),
+                  (36.1627, -86.6816, "Hermitage"),
+                  (36.0987, -86.7816, "Antioch"),
+                  (36.1627, -86.8816, "Belle Meade"),
+              ],
+              "low_crime": [
+                  (36.2307, -86.7816, "Hendersonville"),
+                  (36.1947, -86.6496, "Mount Juliet"),
+                  (36.0627, -86.7496, "Brentwood"),
+                  (36.2627, -86.8136, "Madison"),
+              ]
+          },
+          "jacksonville": {
+              "high_crime": [
+                  (30.3322, -81.6557, "Downtown Jacksonville"),
+                  (30.3078, -81.6983, "Riverside"),
+                  (30.3678, -81.7103, "Northwest Jacksonville"),
+                  (30.2881, -81.6557, "San Marco"),
+              ],
+              "medium_crime": [
+                  (30.3322, -81.5557, "Beaches"),
+                  (30.4322, -81.6557, "North Jacksonville"),
+                  (30.3678, -81.5557, "Arlington"),
+                  (30.2881, -81.7103, "Westside"),
+              ],
+              "low_crime": [
+                  (30.2881, -81.5557, "Southside"),
+                  (30.4678, -81.6557, "Ponte Vedra"),
+                  (30.3322, -81.4557, "Atlantic Beach"),
+                  (30.4322, -81.5557, "Fernandina Beach"),
+              ]
+          },
+          "fort worth": {
+              "high_crime": [
+                  (32.7555, -97.3308, "Downtown Fort Worth"),
+                  (32.7235, -97.3628, "South Fort Worth"),
+                  (32.7875, -97.3628, "East Fort Worth"),
+                  (32.7235, -97.2988, "Southeast Fort Worth"),
+              ],
+              "medium_crime": [
+                  (32.7875, -97.2988, "North Fort Worth"),
+                  (32.7555, -97.2308, "Northeast Fort Worth"),
+                  (32.6875, -97.3308, "Southwest Fort Worth"),
+                  (32.7555, -97.4308, "West Fort Worth"),
+              ],
+              "low_crime": [
+                  (32.8235, -97.3308, "Keller"),
+                  (32.7875, -97.2000, "Colleyville"),
+                  (32.6875, -97.2308, "Burleson"),
+                  (32.8555, -97.2988, "Southlake"),
+              ]
+          },
+          "columbus": {
+              "high_crime": [
+                  (39.9612, -82.9988, "Downtown Columbus"),
+                  (39.9292, -83.0308, "South Columbus"),
+                  (39.9932, -83.0308, "North Columbus"),
+                  (39.9292, -82.9668, "East Columbus"),
+              ],
+              "medium_crime": [
+                  (39.9932, -82.9668, "Worthington"),
+                  (39.9612, -82.8988, "New Albany"),
+                  (39.8932, -82.9988, "Grove City"),
+                  (39.9612, -83.0988, "Hilliard"),
+              ],
+              "low_crime": [
+                  (40.0292, -82.9988, "Delaware"),
+                  (39.9932, -82.8668, "Pickerington"),
+                  (39.8612, -82.9668, "Lancaster"),
+                  (40.0612, -83.0308, "Dublin"),
+              ]
+          },
+          "sacramento": {
+              "high_crime": [
+                  (38.5816, -121.4944, "Downtown Sacramento"),
+                  (38.5496, -121.5264, "South Sacramento"),
+                  (38.6136, -121.5264, "North Sacramento"),
+                  (38.5496, -121.4624, "East Sacramento"),
+              ],
+              "medium_crime": [
+                  (38.6136, -121.4624, "Natomas"),
+                  (38.5816, -121.3944, "Rancho Cordova"),
+                  (38.5136, -121.4944, "Elk Grove"),
+                  (38.5816, -121.5944, "West Sacramento"),
+              ],
+              "low_crime": [
+                  (38.6496, -121.4944, "Roseville"),
+                  (38.6136, -121.3624, "Folsom"),
+                  (38.4816, -121.4624, "Galt"),
+                  (38.7136, -121.4944, "Lincoln"),
+              ]
+          },
+          "el paso": {
+              "high_crime": [
+                  (31.7619, -106.4850, "Downtown El Paso"),
+                  (31.7299, -106.5170, "West El Paso"),
+                  (31.7939, -106.5170, "Northeast El Paso"),
+                  (31.7299, -106.4530, "East El Paso"),
+              ],
+              "medium_crime": [
+                  (31.7939, -106.4530, "Far East El Paso"),
+                  (31.7619, -106.3850, "Horizon City"),
+                  (31.6979, -106.4850, "South El Paso"),
+                  (31.7619, -106.5850, "West Side"),
+              ],
+              "low_crime": [
+                  (31.8299, -106.4850, "North El Paso"),
+                  (31.7939, -106.3530, "Socorro"),
+                  (31.6619, -106.4530, "Mission Valley"),
+                  (31.8619, -106.5170, "Canutillo"),
+              ]
+          }
     }
     
     return city_crime_data.get(city_name)
