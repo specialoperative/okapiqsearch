@@ -108,27 +108,36 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
           map.fitBounds(bounds, 40 as any);
         }
 
-        // Crime overlay
+        // Crime overlay with enhanced debugging
         if (showHeat) {
           const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+          console.log("[Google Maps] Setting up crime heat overlay...");
           
           const overlay = new g.maps.ImageMapType({
             name: "Crime Heat",
             tileSize: new g.maps.Size(256, 256),
-            opacity: 0.95,
+            opacity: 1.0, // Maximum opacity for visibility
             maxZoom: 20,
             minZoom: 1,
             getTileUrl: (coord: any, z: number) => {
               const numTiles = 1 << z;
               const x = ((coord.x % numTiles) + numTiles) % numTiles;
               const y = coord.y;
-              const url = `${apiBase}/analytics/crime-tiles/${z}/${x}/${y}?provider=crimeometer&city=${encodeURIComponent("San Francisco")}&days_back=${crimeDaysBack}&_cache=${Date.now()}`;
+              
+              // Use test provider first to ensure overlay is working
+              const provider = "test"; // Change this to "crimeometer" once we confirm overlay works
+              const url = `${apiBase}/analytics/crime-tiles/${z}/${x}/${y}?provider=${provider}&city=${encodeURIComponent("San Francisco")}&days_back=${crimeDaysBack}&_cache=${Date.now()}`;
+              console.log(`[Crime Overlay] Loading tile: ${url}`);
               return url;
             }
           });
           
+          // Insert at the correct overlay level
+          map.overlayMapTypes.clear(); // Clear any existing overlays first
           map.overlayMapTypes.insertAt(0, overlay);
           overlayRef.current = overlay;
+          
+          console.log("[Google Maps] Crime heat overlay added successfully");
         }
       })
       .catch((e) => console.error("Google Maps load failed", e));
