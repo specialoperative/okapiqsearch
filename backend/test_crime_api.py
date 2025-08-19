@@ -57,8 +57,8 @@ def create_crime_heatmap_tile(crime_points, bbox, z, tile_size=256):
                 py = int((bbox[3] - lat) / (bbox[3] - bbox[1]) * tile_size)
                 
                 if 0 <= px < tile_size and 0 <= py < tile_size:
-                    # Large radius for visibility
-                    radius = max(40, min(120, int(80 * (15 / max(z, 1)))))
+                    # Much smaller radius for localized crime hotspots like Crimeometer
+                    radius = max(8, min(25, int(20 / max(z-5, 1))))
                     
                     # Add heat at this location
                     for dy in range(-radius, radius + 1):
@@ -69,9 +69,9 @@ def create_crime_heatmap_tile(crime_points, bbox, z, tile_size=256):
                             if 0 <= heat_px < tile_size and 0 <= heat_py < tile_size:
                                 distance = math.sqrt(dx*dx + dy*dy)
                                 if distance <= radius:
-                                    # Gaussian heat distribution
-                                    sigma = radius / 3.0
-                                    heat_value = intensity * math.exp(-(distance**2) / (2 * sigma**2)) * 100.0
+                                    # Gaussian heat distribution - much more localized
+                                    sigma = radius / 4.0
+                                    heat_value = intensity * math.exp(-(distance**2) / (2 * sigma**2)) * 20.0
                                     heat_array[heat_py, heat_px] += heat_value
         
         # Normalize heat array
@@ -134,69 +134,279 @@ async def root():
     return {"message": "Crime Heatmap Test Server"}
 
 @app.get("/analytics/crime-tiles/{z}/{x}/{y}")
-async def get_crime_tiles(z: int, x: int, y: int):
-    """Generate crime heat tiles for San Francisco"""
+async def get_crime_tiles(z: int, x: int, y: int, city: str = "San Francisco"):
+    """Generate crime heat tiles for any US city"""
     
     # Get bounding box for this tile
     bbox = tile_to_bbox(z, x, y)
     
-    # Dense San Francisco crime data with realistic locations
-    sf_crime_data = [
-        # Tenderloin (high crime)
-        (37.7849, -122.4094, 1.0),
-        (37.7839, -122.4104, 0.9),
-        (37.7859, -122.4084, 0.95),
-        (37.7829, -122.4114, 0.85),
-        (37.7869, -122.4074, 0.9),
-        
-        # SOMA (high crime)
-        (37.7753, -122.4180, 0.85),
-        (37.7743, -122.4190, 0.8),
-        (37.7763, -122.4170, 0.9),
-        (37.7733, -122.4200, 0.75),
-        (37.7773, -122.4160, 0.85),
-        
-        # Mission District (medium-high crime)
-        (37.7599, -122.4148, 0.8),
-        (37.7589, -122.4158, 0.75),
-        (37.7609, -122.4138, 0.8),
-        (37.7579, -122.4168, 0.7),
-        (37.7619, -122.4128, 0.75),
-        
-        # Castro (medium crime)
-        (37.7609, -122.4348, 0.6),
-        (37.7599, -122.4358, 0.55),
-        (37.7619, -122.4338, 0.65),
-        
-        # Haight (medium crime)
-        (37.7693, -122.4463, 0.65),
-        (37.7683, -122.4473, 0.6),
-        (37.7703, -122.4453, 0.7),
-        
-        # Financial District (medium crime)
-        (37.7949, -122.4031, 0.55),
-        (37.7939, -122.4041, 0.5),
-        (37.7959, -122.4021, 0.6),
-        
-        # Union Square area (medium-high crime)
-        (37.7879, -122.4075, 0.75),
-        (37.7869, -122.4085, 0.7),
-        (37.7889, -122.4065, 0.8),
-        
-        # Chinatown (low-medium crime)
-        (37.7941, -122.4078, 0.4),
-        (37.7931, -122.4088, 0.35),
-        (37.7951, -122.4068, 0.45),
-        
-        # Additional scattered points for density
-        (37.7749, -122.4194, 0.8),  # Central SF
-        (37.7849, -122.4294, 0.6),  # Western SF
-        (37.7649, -122.4094, 0.7),  # Southern SF
-        (37.7949, -122.4194, 0.5),  # Northern SF
-    ]
+    # Create realistic crime choropleth with many small localized hotspots for any city
+    crime_data = []
+    
+    # Define crime patterns for major US cities
+    city_crime_patterns = {
+        "san francisco": {
+            "high": [
+                (37.7849, -122.4094, "Tenderloin"),
+                (37.7753, -122.4180, "SOMA"), 
+                (37.7599, -122.4148, "Mission"),
+                (37.7809, -122.4149, "Union Square"),
+            ],
+            "medium": [
+                (37.7609, -122.4348, "Castro"),
+                (37.7693, -122.4463, "Haight"),
+                (37.7749, -122.4094, "Financial"),
+                (37.7941, -122.4078, "Chinatown"),
+            ],
+            "low": [
+                (37.7599, -122.4499, "Richmond"),
+                (37.7899, -122.3999, "North Beach"),
+                (37.7549, -122.4399, "Noe Valley"),
+                (37.7899, -122.4399, "Pacific Heights"),
+            ]
+        },
+        "new york city": {
+            "high": [
+                (40.7831, -73.9712, "Harlem"),
+                (40.6892, -73.9442, "Bedford-Stuyvesant"),
+                (40.6782, -73.9442, "Crown Heights"),
+                (40.8176, -73.9182, "Bronx South"),
+            ],
+            "medium": [
+                (40.7282, -73.7949, "Queens"),
+                (40.7505, -73.9934, "Times Square"),
+                (40.7831, -73.9442, "Upper Manhattan"),
+                (40.6892, -73.9712, "Brooklyn"),
+            ],
+            "low": [
+                (40.7831, -73.9712, "Upper East Side"),
+                (40.7505, -73.9772, "Chelsea"),
+                (40.7282, -73.9942, "Lower Manhattan"),
+                (40.6892, -73.9442, "Park Slope"),
+            ]
+        },
+        "los angeles": {
+            "high": [
+                (34.0522, -118.2437, "Downtown LA"),
+                (33.9425, -118.4081, "South LA"),
+                (34.0928, -118.2951, "Hollywood"),
+                (34.0194, -118.2863, "Mid-Wilshire"),
+            ],
+            "medium": [
+                (34.1367, -118.3532, "Van Nuys"),
+                (34.0730, -118.4003, "Beverly Hills"),
+                (34.0928, -118.2768, "Los Feliz"),
+                (33.9731, -118.2468, "Inglewood"),
+            ],
+            "low": [
+                (34.0194, -118.4912, "Santa Monica"),
+                (34.1522, -118.2437, "Pasadena"),
+                (34.0194, -118.2863, "Westwood"),
+                (34.0730, -118.4003, "Bel Air"),
+            ]
+        },
+        "chicago": {
+            "high": [
+                (41.8369, -87.6847, "West Side"),
+                (41.7587, -87.6998, "South Side"),
+                (41.8781, -87.6298, "Downtown"),
+                (41.9028, -87.6847, "North Side"),
+            ],
+            "medium": [
+                (41.9484, -87.6553, "Lincoln Park"),
+                (41.8369, -87.6053, "Hyde Park"),
+                (41.8781, -87.6553, "Loop"),
+                (41.9169, -87.6847, "Lakeview"),
+            ],
+            "low": [
+                (41.9484, -87.6298, "Gold Coast"),
+                (41.8587, -87.6053, "Millennium Park"),
+                (41.9169, -87.6553, "River North"),
+                (41.8928, -87.6053, "Navy Pier"),
+            ]
+        },
+        "houston": {
+            "high": [
+                (29.7604, -95.3698, "Downtown Houston"),
+                (29.6516, -95.3698, "South Houston"),
+                (29.8044, -95.4194, "Northwest Houston"),
+                (29.7604, -95.4194, "Southwest Houston"),
+            ],
+            "medium": [
+                (29.7372, -95.4194, "Galleria"),
+                (29.8044, -95.3698, "The Heights"),
+                (29.7604, -95.3202, "East Houston"),
+                (29.6847, -95.3698, "Medical Center"),
+            ],
+            "low": [
+                (29.7372, -95.3202, "River Oaks"),
+                (29.8044, -95.3202, "Memorial"),
+                (29.7604, -95.2706, "Museum District"),
+                (29.6847, -95.3202, "Rice Village"),
+            ]
+        },
+        "phoenix": {
+            "high": [
+                (33.4484, -112.0740, "Downtown Phoenix"),
+                (33.3895, -112.0740, "South Phoenix"),
+                (33.5073, -112.0740, "North Phoenix"),
+                (33.4484, -112.1336, "West Phoenix"),
+            ],
+            "medium": [
+                (33.4484, -112.0144, "East Phoenix"),
+                (33.5073, -112.0144, "Paradise Valley"),
+                (33.3895, -112.0144, "Ahwatukee"),
+                (33.4484, -111.9548, "Scottsdale Border"),
+            ],
+            "low": [
+                (33.5073, -111.9548, "North Scottsdale"),
+                (33.4484, -111.8952, "Tempe Border"),
+                (33.3895, -111.9548, "Chandler Border"),
+                (33.5662, -112.0144, "Deer Valley"),
+            ]
+        },
+        "philadelphia": {
+            "high": [
+                (39.9526, -75.1652, "North Philadelphia"),
+                (39.9042, -75.1652, "South Philadelphia"),
+                (39.9284, -75.1652, "Center City"),
+                (39.9526, -75.2128, "West Philadelphia"),
+            ],
+            "medium": [
+                (39.9768, -75.1652, "North Philly"),
+                (39.9284, -75.1176, "East Philadelphia"),
+                (39.9042, -75.1176, "University City"),
+                (39.9526, -75.1176, "Temple Area"),
+            ],
+            "low": [
+                (39.9768, -75.1176, "Fishtown"),
+                (39.9042, -75.2128, "Southwest Philly"),
+                (39.9284, -75.2128, "Fairmount"),
+                (39.9768, -75.2128, "Mount Airy"),
+            ]
+        },
+        "seattle": {
+            "high": [
+                (47.6097, -122.3331, "Downtown Seattle"),
+                (47.5952, -122.3331, "International District"),
+                (47.6097, -122.3807, "Ballard"),
+                (47.6242, -122.3331, "Capitol Hill"),
+            ],
+            "medium": [
+                (47.6387, -122.3331, "University District"),
+                (47.6097, -122.2855, "Bellevue Border"),
+                (47.5807, -122.3331, "Georgetown"),
+                (47.6242, -122.3807, "Fremont"),
+            ],
+            "low": [
+                (47.6387, -122.2855, "Eastside"),
+                (47.6532, -122.3331, "Green Lake"),
+                (47.6097, -122.4283, "West Seattle"),
+                (47.5662, -122.3331, "Tukwila Border"),
+            ]
+        },
+        "denver": {
+            "high": [
+                (39.7392, -104.9903, "Downtown Denver"),
+                (39.7247, -104.9903, "South Denver"),
+                (39.7392, -105.0379, "West Denver"),
+                (39.7537, -104.9903, "North Denver"),
+            ],
+            "medium": [
+                (39.7392, -104.9427, "East Denver"),
+                (39.7247, -104.9427, "Cherry Creek"),
+                (39.7537, -104.9427, "Highlands"),
+                (39.7247, -105.0379, "Lakewood Border"),
+            ],
+            "low": [
+                (39.7682, -104.9903, "Westminster Border"),
+                (39.7102, -104.9903, "Littleton Border"),
+                (39.7392, -104.8951, "Aurora Border"),
+                (39.7537, -105.0379, "Arvada Border"),
+            ]
+        },
+        "boston": {
+            "high": [
+                (42.3601, -71.0589, "Downtown Boston"),
+                (42.3456, -71.0589, "South End"),
+                (42.3601, -71.1065, "Cambridge Border"),
+                (42.3746, -71.0589, "North End"),
+            ],
+            "medium": [
+                (42.3456, -71.0113, "Back Bay"),
+                (42.3746, -71.0113, "Beacon Hill"),
+                (42.3601, -71.0113, "Financial District"),
+                (42.3311, -71.0589, "Dorchester"),
+            ],
+            "low": [
+                (42.3891, -71.0589, "Charlestown"),
+                (42.3456, -71.1065, "Jamaica Plain"),
+                (42.3746, -71.1065, "Harvard Area"),
+                (42.3601, -70.9637, "East Boston"),
+            ]
+        },
+        "las vegas": {
+            "high": [
+                (36.1699, -115.1398, "Downtown Las Vegas"),
+                (36.1554, -115.1398, "South Las Vegas"),
+                (36.1699, -115.1874, "West Las Vegas"),
+                (36.1844, -115.1398, "North Las Vegas"),
+            ],
+            "medium": [
+                (36.1699, -115.0922, "East Las Vegas"),
+                (36.1410, -115.1398, "Henderson Border"),
+                (36.1988, -115.1398, "Summerlin"),
+                (36.1554, -115.0922, "Airport Area"),
+            ],
+            "low": [
+                (36.2133, -115.1398, "North Summerlin"),
+                (36.1265, -115.1398, "Henderson"),
+                (36.1699, -115.0446, "Lake Las Vegas"),
+                (36.1554, -115.2350, "Red Rock"),
+            ]
+        }
+    }
+    
+    # Normalize city name and get crime pattern
+    city_key = city.lower().replace(" ", " ").strip()
+    if city_key not in city_crime_patterns:
+        # Default to San Francisco pattern for unlisted cities
+        city_key = "san francisco"
+    
+    pattern = city_crime_patterns[city_key]
+    high_crime_centers = pattern["high"]
+    medium_crime_centers = pattern["medium"] 
+    low_crime_centers = pattern["low"]
+    
+    # Generate clusters around each center for realistic choropleth
+    import random
+    
+    # High crime clusters (intense red)
+    for lat, lng, name in high_crime_centers:
+        for _ in range(25):  # Dense clusters
+            offset_lat = random.uniform(-0.005, 0.005)  # ~500m variation
+            offset_lng = random.uniform(-0.005, 0.005)
+            intensity = random.uniform(0.7, 1.0)  # High intensity
+            crime_data.append((lat + offset_lat, lng + offset_lng, intensity))
+    
+    # Medium crime clusters (medium red)
+    for lat, lng, name in medium_crime_centers:
+        for _ in range(15):  # Medium density
+            offset_lat = random.uniform(-0.008, 0.008)  # ~800m variation
+            offset_lng = random.uniform(-0.008, 0.008)
+            intensity = random.uniform(0.4, 0.7)  # Medium intensity
+            crime_data.append((lat + offset_lat, lng + offset_lng, intensity))
+    
+    # Low crime clusters (light red)
+    for lat, lng, name in low_crime_centers:
+        for _ in range(8):  # Low density
+            offset_lat = random.uniform(-0.012, 0.012)  # ~1.2km variation
+            offset_lng = random.uniform(-0.012, 0.012)
+            intensity = random.uniform(0.1, 0.4)  # Low intensity
+            crime_data.append((lat + offset_lat, lng + offset_lng, intensity))
     
     # Create the crime heatmap tile
-    tile_data = create_crime_heatmap_tile(sf_crime_data, bbox, z)
+    tile_data = create_crime_heatmap_tile(crime_data, bbox, z)
     
     return Response(
         content=tile_data,

@@ -122,7 +122,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
               const numTiles = 1 << z;
               const x = ((coord.x % numTiles) + numTiles) % numTiles;
               const y = coord.y;
-              const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}`;
+              const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}?city=${encodeURIComponent("San Francisco")}`;
               return url;
             }
           });
@@ -196,7 +196,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             const numTiles = 1 << z;
             const x = ((coord.x % numTiles) + numTiles) % numTiles;
             const y = coord.y;
-            const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}`;
+            const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}?city=${encodeURIComponent("San Francisco")}`;
             return url;
           }
         });
