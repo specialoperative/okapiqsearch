@@ -57,7 +57,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   heightClassName = "h-96",
   onBusinessClick,
   showHeat = false,
-  zoom = 12,
+  zoom = 13,
   fitToBusinesses = true,
   markerItems,
   crimeCity,
@@ -115,24 +115,20 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
           const overlay = new g.maps.ImageMapType({
             name: "Crime Heat",
             tileSize: new g.maps.Size(256, 256),
-            opacity: 1.0, // Maximum opacity for visibility
+            opacity: 0.95,
             maxZoom: 20,
             minZoom: 1,
             getTileUrl: (coord: any, z: number) => {
               const numTiles = 1 << z;
               const x = ((coord.x % numTiles) + numTiles) % numTiles;
               const y = coord.y;
-              const url = `${apiBase}/analytics/crime-tiles/${z}/${x}/${y}?provider=crimeometer&city=${encodeURIComponent("San Francisco")}&days_back=${crimeDaysBack}&_cache=${Date.now()}`;
-              console.log(`[CRIME OVERLAY] Requesting tile: ${url}`);
+              const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}`;
               return url;
             }
           });
           
-          // Place overlay on top with highest index
-          map.overlayMapTypes.push(overlay);
+          map.overlayMapTypes.insertAt(0, overlay);
           overlayRef.current = overlay;
-          
-          console.log(`[CRIME OVERLAY] Crime heat overlay added for ${crimeCity || "San Francisco"} with ${crimeDaysBack} days back`);
         }
       })
       .catch((e) => console.error("Google Maps load failed", e));
@@ -200,7 +196,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             const numTiles = 1 << z;
             const x = ((coord.x % numTiles) + numTiles) % numTiles;
             const y = coord.y;
-            const url = `${apiBase}/analytics/crime-tiles/${z}/${x}/${y}?provider=crimeometer&city=${encodeURIComponent("San Francisco")}&days_back=${crimeDaysBack}&_cache=${Date.now()}`;
+            const url = `http://localhost:8001/analytics/crime-tiles/${z}/${x}/${y}`;
             return url;
           }
         });
