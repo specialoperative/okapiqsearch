@@ -1,0 +1,60 @@
+INFO:     Will watch for changes in these directories: ['/Users/scripturebrandenburg/Desktop/CS_PROJECTS/oc_startup/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [63093] using WatchFiles
+INFO:     Started server process [63170]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='accounting firms San Francisco' loc='San Francisco'
+INFO:app.routers.intelligence:Fast market scan completed in 1.81s, found 30 businesses
+INFO:     127.0.0.1:52890 - "POST /intelligence/scan HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'app/routers/intelligence.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [63170]
+INFO:     Started server process [63778]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/routers/intelligence.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [63778]
+INFO:     Started server process [63998]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:53422 - "OPTIONS /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
+ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
+INFO:app.routers.intelligence:Fast market scan completed in 5.03s, found 40 businesses
+INFO:     127.0.0.1:53422 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: entertainment
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='entertainment San Francisco' loc='San Francisco'
+ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
+INFO:app.routers.intelligence:Fast market scan completed in 3.67s, found 39 businesses
+INFO:     127.0.0.1:53436 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53462 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53478 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53489 - "GET /analytics/crime-heat?provider=crimeometer&city=seattle&limit=6000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53507 - "GET /analytics/crime-heat?provider=crimeometer&city=oklahoma%20city&limit=6000&days_back=365 HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: 
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
+ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
+INFO:app.routers.intelligence:Fast market scan completed in 4.78s, found 40 businesses
+INFO:     127.0.0.1:53664 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: education
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='education San Francisco' loc='San Francisco'
+ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
+INFO:app.routers.intelligence:Fast market scan completed in 3.63s, found 39 businesses
+INFO:     127.0.0.1:53680 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: transportation
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='transportation San Francisco' loc='San Francisco'
+ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
+INFO:app.routers.intelligence:Fast market scan completed in 4.97s, found 39 businesses
+INFO:     127.0.0.1:53698 - "POST /intelligence/scan HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'app/routers/intelligence.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [63998]
+INFO:     Stopping reloader process [63093]

@@ -56,73 +56,73 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                 'restaurant': 'restaurant',
                 'retail': 'retail store',
                 'healthcare': 'clinic',
+                'accounting firms': 'accounting firm',
+                'security guards': 'security guard',
+                'fire and safety': 'fire protection services',
             }
             term = keyword_map.get(ind, ind or 'business')
             search_queries = [f"{term} {request.location}"]
         
-        # Quick Google SERP aggregation with aggressive timeout
+        # Use the SmartCrawlerHub to aggregate multiple sources (SerpAPI, Apify, Yelp, etc.)
         all_businesses = []
-        for query in search_queries[:2]:  # Maximum 2 queries for speed
-            try:
-                crawl_req = CrawlRequest(
-                    crawler_type=CrawlerType.GOOGLE_SERP,
-                    target_url="https://serpapi.com/search.json",
-                    search_params={
-                        "query": query,
-                        "location": request.location,
-                        "num": 15
-                    },
-            priority=1
-        )
-                
-                # Apply 3-second timeout for maximum speed
-                crawl_res = await asyncio.wait_for(
-                    crawler_hub._execute_crawl(crawl_req), 
-                    timeout=3.0
-                )
-                
-                if crawl_res and crawl_res.success:
-                    for item in crawl_res.data[:20]:
-                        name_val = item.get('name')
-                        if not isinstance(name_val, str) or not name_val.strip():
-                            continue
-                            
-                        addr_val = (item.get('address') or '').strip()
-                        website_val = (item.get('website') or '').strip()
-                        
-                        # Clean website URL
-                        if website_val and not website_val.startswith(('http://', 'https://')):
-                            website_val = f"https://{website_val}"
-                        
-                        # Determine industry
-                        industry = (request.industry or '').lower()
-                        if not industry:
-                            q_low = query.lower()
-                            if 'restaurant' in q_low:
-                                industry = 'restaurant'
-                            elif 'hvac' in q_low:
-                                industry = 'hvac'
-                            elif 'auto' in q_low:
-                                industry = 'automotive'
-                            else:
-                                industry = 'general'
-                        
-                        all_businesses.append({
-                            'name': name_val.strip(),
-                            'industry': industry,
-                            'address': addr_val,
-                            'phone': item.get('phone', ''),
-                            'website': website_val,
-                            'rating': item.get('rating', 0.0),
-                            'reviews': item.get('review_count', 0),
-                            'coordinates': item.get('coordinates'),
-                            'source': 'google_serp'
-                        })
-                        
-            except asyncio.TimeoutError:
-                logger.warning(f"SERP search timed out for '{query}' after 3 seconds")
-            except Exception as e:
-                logger.warning(f"SERP search failed for '{query}': {e}")
+        try:
+            # Map requested crawl_sources (strings) to CrawlerType enums
+            requested_sources = request.crawl_sources or ['google_serp']
+            source_types = []
+            for s in requested_sources:
+                key = s.strip().lower()
+                try:
+                    # handle common naming differences
+                    mapping = {
+                        'google_serp': CrawlerType.GOOGLE_SERP,
+                        'google_maps': CrawlerType.GOOGLE_MAPS,
+                        'yelp': CrawlerType.YELP,
+                        'apify_gmaps': CrawlerType.APIFY_GMAPS,
+                        'apify_gmaps_email': CrawlerType.APIFY_GMAPS_EMAIL,
+                        'apify_gmaps_websites': CrawlerType.APIFY_GMAPS_WEBSITES,
+                        'apify_website_crawler': CrawlerType.APIFY_WEBSITE_CRAWLER,
+                        'firecrawl': CrawlerType.FIRECRAWL,
+                        'linkedin': CrawlerType.LINKEDIN,
+                        'sba_records': CrawlerType.SBA_RECORDS,
+                    }
+                    if key in mapping:
+                        source_types.append(mapping[key])
+                except Exception:
+                    continue
+
+            # Ensure at least SERP and APIFY+YELP are attempted for best coverage
+            if not source_types:
+                source_types = [CrawlerType.APIFY_GMAPS, CrawlerType.GOOGLE_SERP, CrawlerType.YELP]
+
+            # Run the crawl using the hub
+            hub_results = await crawler_hub.crawl_business_data(request.location, (request.industry or '').lower(), sources=source_types)
+
+            # Merge results from each source
+            for src_key, res in hub_results.items():
+                if not res or not getattr(res, 'success', False):
+                    continue
+                for item in (res.data or [])[: (request.max_businesses or 20)]:
+                    name_val = item.get('name') or item.get('business_name')
+                    if not isinstance(name_val, str) or not name_val.strip():
+                        continue
+                    addr_val = (item.get('address') or item.get('formatted_address') or '')
+                    website_val = (item.get('website') or item.get('url') or '').strip()
+                    if website_val and not website_val.startswith(('http://', 'https://')):
+                        website_val = f"https://{website_val}"
+                    industry = request.industry or item.get('industry') or ''
+                    all_businesses.append({
+                        'name': name_val.strip(),
+                        'industry': industry,
+                        'address': addr_val,
+                        'phone': item.get('phone') or item.get('display_phone') or '',
+                        'website': website_val,
+                        'rating': item.get('rating') or item.get('gmap_rating') or 0.0,
+                        'reviews': item.get('review_count') or item.get('reviewCount') or 0,
+                        'coordinates': item.get('coordinates') or item.get('location') or [],
+                        'source': src_key
+                    })
+        except Exception as e:
+            logger.warning(f"Crawl hub aggregation failed: {e}")
         
         # Use real data if available
         if all_businesses:

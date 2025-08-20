@@ -49,14 +49,14 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     yelp: true,
     // Apify actors
     apify_gmaps: true,
-    apify_gmaps_email: false,
-    apify_gmaps_websites: false,
-    apify_website_crawler: false,
-    apify_apollo: false,
-    apify_linkedin_jobs: false,
+    apify_gmaps_email: true,
+    apify_gmaps_websites: true,
+    apify_website_crawler: true,
+    apify_apollo: true,
+    apify_linkedin_jobs: true,
     // Other signals
-    linkedin: false,
-    sba_records: false,
+    linkedin: true,
+    sba_records: true,
   });
   const [advFilters, setAdvFilters] = useState({
     includeRisk: true,
@@ -110,7 +110,8 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
   const industries = [
     'HVAC', 'Plumbing', 'Electrical', 'Landscaping', 'Restaurant', 
     'Retail', 'Healthcare', 'Automotive', 'Construction', 'Manufacturing',
-    'IT Services', 'Real Estate', 'Education', 'Entertainment', 'Transportation'
+    'IT Services', 'Real Estate', 'Education', 'Entertainment', 'Transportation',
+    'Accounting Firms', 'Security Guards', 'Fire and Safety'
   ];
 
   const popularLocations = [
