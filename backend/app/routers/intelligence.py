@@ -94,7 +94,7 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
             if not source_types:
                 source_types = [CrawlerType.APIFY_GMAPS, CrawlerType.GOOGLE_SERP, CrawlerType.YELP]
 
-            # Run the crawl using the hub
+            # Run the crawl using the hub (include all available sources when requested)
             hub_results = await crawler_hub.crawl_business_data(request.location, (request.industry or '').lower(), sources=source_types)
 
             # Merge results from each source
@@ -224,8 +224,8 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
     duration = end_time - start_time
     
     logger.info(f"Fast market scan completed in {duration:.2f}s, found {len(businesses)} businesses")
-        
-        return {
+
+    return {
         "success": True,
         "request_id": request_id,
         "businesses": businesses,

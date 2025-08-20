@@ -57,6 +57,7 @@ export default function MarketScannerPage({ onNavigate, showHeader = true, initi
     // Other signals
     linkedin: true,
     sba_records: true,
+    firecrawl: true,
   });
   const [advFilters, setAdvFilters] = useState({
     includeRisk: true,

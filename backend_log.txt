@@ -1,60 +1,89 @@
 INFO:     Will watch for changes in these directories: ['/Users/scripturebrandenburg/Desktop/CS_PROJECTS/oc_startup/backend']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [63093] using WatchFiles
-INFO:     Started server process [63170]
+INFO:     Started reloader process [76653] using WatchFiles
+INFO:     Started server process [76744]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='accounting firms San Francisco' loc='San Francisco'
-INFO:app.routers.intelligence:Fast market scan completed in 1.81s, found 30 businesses
-INFO:     127.0.0.1:52890 - "POST /intelligence/scan HTTP/1.1" 200 OK
-WARNING:  WatchFiles detected changes in 'app/routers/intelligence.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [63170]
-INFO:     Started server process [63778]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'app/routers/intelligence.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [63778]
-INFO:     Started server process [63998]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     127.0.0.1:53422 - "OPTIONS /intelligence/scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55674 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55702 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55702 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55700 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55704 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55704 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55700 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55728 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55728 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55726 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55728 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55744 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55743 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55775 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55776 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55784 - "OPTIONS /intelligence/scan HTTP/1.1" 200 OK
 INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
 ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
-INFO:app.routers.intelligence:Fast market scan completed in 5.03s, found 40 businesses
-INFO:     127.0.0.1:53422 - "POST /intelligence/scan HTTP/1.1" 200 OK
-INFO:app.routers.intelligence:Market scan request: San Francisco, industry: entertainment
-INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='entertainment San Francisco' loc='San Francisco'
-ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
-INFO:app.routers.intelligence:Fast market scan completed in 3.67s, found 39 businesses
-INFO:     127.0.0.1:53436 - "POST /intelligence/scan HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53462 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53478 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53489 - "GET /analytics/crime-heat?provider=crimeometer&city=seattle&limit=6000&days_back=365 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53507 - "GET /analytics/crime-heat?provider=crimeometer&city=oklahoma%20city&limit=6000&days_back=365 HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Fast market scan completed in 4.40s, found 41 businesses
+INFO:     127.0.0.1:55784 - "POST /intelligence/scan HTTP/1.1" 200 OK
 INFO:app.routers.intelligence:Market scan request: San Francisco, industry: 
 INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
 ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
-INFO:app.routers.intelligence:Fast market scan completed in 4.78s, found 40 businesses
-INFO:     127.0.0.1:53664 - "POST /intelligence/scan HTTP/1.1" 200 OK
-INFO:app.routers.intelligence:Market scan request: San Francisco, industry: education
-INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='education San Francisco' loc='San Francisco'
+INFO:app.routers.intelligence:Fast market scan completed in 4.06s, found 41 businesses
+INFO:     127.0.0.1:55799 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: New York, industry: 
 ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
-INFO:app.routers.intelligence:Fast market scan completed in 3.63s, found 39 businesses
-INFO:     127.0.0.1:53680 - "POST /intelligence/scan HTTP/1.1" 200 OK
-INFO:app.routers.intelligence:Market scan request: San Francisco, industry: transportation
-INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='transportation San Francisco' loc='San Francisco'
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses New York' loc='New York'
+INFO:app.routers.intelligence:Fast market scan completed in 3.48s, found 41 businesses
+INFO:     127.0.0.1:55814 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55840 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55849 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55849 - "OPTIONS /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: 
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
+INFO:app.routers.intelligence:Fast market scan completed in 10.50s, found 41 businesses
+INFO:     127.0.0.1:55849 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: West Sacramento, industry: 
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses West Sacramento' loc='West Sacramento'
 ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
-INFO:app.routers.intelligence:Fast market scan completed in 4.97s, found 39 businesses
-INFO:     127.0.0.1:53698 - "POST /intelligence/scan HTTP/1.1" 200 OK
-WARNING:  WatchFiles detected changes in 'app/routers/intelligence.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [63998]
-INFO:     Stopping reloader process [63093]
+INFO:app.routers.intelligence:Fast market scan completed in 3.63s, found 38 businesses
+INFO:     127.0.0.1:55892 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55984 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56000 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: 
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
+ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
+INFO:app.routers.intelligence:Fast market scan completed in 4.80s, found 41 businesses
+INFO:     127.0.0.1:56006 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: security guards
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='security guards San Francisco' loc='San Francisco'
+INFO:app.routers.intelligence:Fast market scan completed in 11.56s, found 35 businesses
+INFO:     127.0.0.1:56267 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: 
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
+ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
+INFO:app.routers.intelligence:Fast market scan completed in 3.87s, found 41 businesses
+INFO:     127.0.0.1:56406 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56450 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56452 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56452 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56450 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56463 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56463 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56460 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56463 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56465 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56491 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56491 - "OPTIONS /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: 
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
+INFO:app.routers.intelligence:Fast market scan completed in 12.86s, found 41 businesses
+INFO:     127.0.0.1:56491 - "POST /intelligence/scan HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56546 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56562 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56562 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56546 - "GET /analytics/crime-heat?provider=crimeometer&city=us&limit=8000&days_back=365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56585 - "OPTIONS /intelligence/scan HTTP/1.1" 200 OK
+INFO:app.routers.intelligence:Market scan request: San Francisco, industry: 
+INFO:app.crawlers.smart_crawler_hub.GoogleSerpAgent:SERP parsed items: 20 for query='businesses San Francisco' loc='San Francisco'
+ERROR:app.crawlers.smart_crawler_hub.GoogleScapeAgent:Google Maps crawl failed: Target page, context or browser has been closed
+INFO:app.routers.intelligence:Fast market scan completed in 4.87s, found 41 businesses
+INFO:     127.0.0.1:56585 - "POST /intelligence/scan HTTP/1.1" 200 OK
