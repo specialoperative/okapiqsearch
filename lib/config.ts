@@ -1,4 +1,4 @@
-// API Configuration for Comprehensive Data Intelligence Platform
+// API Configuration for Okapiq - Bloomberg Terminal for Main Street
 export const API_CONFIG = {
   YELP_API_KEY:
     process.env.YELP_API_KEY ||
@@ -49,3 +49,16 @@ export function validateApiKeys() {
 }
 
 export const config = API_CONFIG
+
+export const DEAL_INTELLIGENCE_CONFIG = {
+  YELP_API_KEY: API_CONFIG.YELP_API_KEY,
+  GOOGLE_MAPS_API_KEY: API_CONFIG.GOOGLE_MAPS_API_KEY,
+  CENSUS_API_KEY: API_CONFIG.CENSUS_API_KEY,
+  OPENAI_API_KEY: API_CONFIG.OPENAI_API_KEY,
+  DATA_AXLE_API_KEY: API_CONFIG.DATA_AXLE_API_KEY,
+  SERP_API_KEY: API_CONFIG.SERPAPI_API_KEY,
+  APIFY_API_KEY: API_CONFIG.APIFY_API_TOKEN,
+  ARCGIS_API_KEY: API_CONFIG.ARCGIS_API_KEY,
+  METRICS_URL: process.env.METRICS_URL || "http://localhost:5001",
+  PORT: process.env.PORT || "4000",
+} as const

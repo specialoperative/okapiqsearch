@@ -1,66 +1,169 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, MapPin, Phone, Globe, Star, Database, TrendingUp, Info } from "lucide-react"
+import { Search, MapPin, Phone, Globe, Star, Database, TrendingUp, Info, X, Download } from "lucide-react"
 
 const NAICS_CODES = {
-  "Accommodation and Food Services": "72",
-  "Administrative and Support Services": "56",
-  "Agriculture, Forestry, Fishing and Hunting": "11",
-  "Arts, Entertainment, and Recreation": "71",
+  "Crop Production": "111",
+  "Animal Production and Aquaculture": "112",
+  "Forestry and Logging": "113",
+  "Fishing, Hunting and Trapping": "114",
+  "Support Activities for Agriculture and Forestry": "115",
+  "Oil and Gas Extraction": "211",
+  "Mining (except Oil and Gas)": "212",
+  "Support Activities for Mining": "213",
+  "Electric Power Generation, Transmission and Distribution": "2211",
+  "Natural Gas Distribution": "2212",
+  "Water, Sewage and Other Systems": "2213",
+  "Construction of Buildings": "236",
+  "Heavy and Civil Engineering Construction": "237",
+  "Specialty Trade Contractors": "238",
+  "Plumbing, Heating, and Air-Conditioning Contractors": "238220",
+  "Electrical Contractors and Other Wiring Installation Contractors": "238210",
+  "Masonry Contractors": "238140",
+  "Roofing Contractors": "238160",
+  "Concrete Contractors": "238110",
+  "Food Manufacturing": "311",
+  "Beverage and Tobacco Product Manufacturing": "312",
+  "Textile Mills": "313",
+  "Textile Product Mills": "314",
+  "Apparel Manufacturing": "315",
+  "Leather and Allied Product Manufacturing": "316",
+  "Wood Product Manufacturing": "321",
+  "Paper Manufacturing": "322",
+  "Printing and Related Support Activities": "323",
+  "Petroleum and Coal Products Manufacturing": "324",
+  "Chemical Manufacturing": "325",
+  "Plastics and Rubber Products Manufacturing": "326",
+  "Nonmetallic Mineral Product Manufacturing": "327",
+  "Primary Metal Manufacturing": "331",
+  "Fabricated Metal Product Manufacturing": "332",
+  "Machinery Manufacturing": "333",
+  "Computer and Electronic Product Manufacturing": "334",
+  "Electrical Equipment, Appliance, and Component Manufacturing": "335",
+  "Transportation Equipment Manufacturing": "336",
+  "Furniture and Related Product Manufacturing": "337",
+  "Miscellaneous Manufacturing": "339",
+  "Merchant Wholesalers, Durable Goods": "423",
+  "Merchant Wholesalers, Nondurable Goods": "424",
+  "Wholesale Electronic Markets and Agents and Brokers": "425",
+  "Motor Vehicle and Parts Dealers": "441",
+  "Furniture and Home Furnishings Stores": "442",
+  "Electronics and Appliance Stores": "443",
+  "Building Material and Garden Equipment and Supplies Dealers": "444",
+  "Food and Beverage Stores": "445",
+  "Supermarkets and Other Grocery Stores": "445110", // Added detailed grocery store code
+  "Health and Personal Care Stores": "446",
+  "Gasoline Stations": "447",
+  "Clothing and Clothing Accessories Stores": "448",
+  "Sporting Goods, Hobby, Musical Instrument, and Book Stores": "451",
+  "General Merchandise Stores": "452",
+  "Miscellaneous Store Retailers": "453",
+  "Nonstore Retailers": "454",
+  "Air Transportation": "481",
+  "Rail Transportation": "482",
+  "Water Transportation": "483",
+  "Truck Transportation": "484",
+  "Transit and Ground Passenger Transportation": "485",
+  "Pipeline Transportation": "486",
+  "Scenic and Sightseeing Transportation": "487",
+  "Support Activities for Transportation": "488",
+  "Postal Service": "491",
+  "Couriers and Messengers": "492",
+  "Warehousing and Storage": "493",
+  "Publishing Industries (except Internet)": "511",
+  "Software Publishers": "511210",
+  "Motion Picture and Sound Recording Industries": "512",
+  "Broadcasting (except Internet)": "515",
+  Telecommunications: "517",
+  "Data Processing, Hosting, and Related Services": "518",
+  "Other Information Services": "519",
+  "Monetary Authorities-Central Bank": "521",
+  "Credit Intermediation and Related Activities": "522",
+  "Securities, Commodity Contracts, and Other Financial Investments": "523",
+  "Insurance Carriers and Related Activities": "524",
+  "Funds, Trusts, and Other Financial Vehicles": "525",
+  "Real Estate": "531",
+  "Rental and Leasing Services": "532",
+  "Lessors of Nonfinancial Intangible Assets": "533",
+  "Legal Services": "5411",
   "Accounting, Tax Preparation, Bookkeeping, and Payroll Services": "5412",
-  Construction: "23",
-  "Educational Services": "61",
-  "Finance and Insurance": "52",
-  "Health Care and Social Assistance": "62",
-  Information: "51",
-  "Management of Companies and Enterprises": "55",
-  Manufacturing: "31-33",
-  "Mining, Quarrying, and Oil and Gas Extraction": "21",
-  "Other Services (except Public Administration)": "81",
-  "Professional, Scientific, and Technical Services": "54",
-  "Public Administration": "92",
-  "Real Estate and Rental and Leasing": "53",
-  "Retail Trade": "44-45",
-  "Transportation and Warehousing": "48-49",
-  Utilities: "22",
-  "Wholesale Trade": "42",
-  "Fire & Life Safety": "2.8",
-  "HVACR Services": "2.5",
-  "Electrical / Lighting / Controls": "2.7",
-  "Facility Services": "2.2",
-  "Equipment Rental & Site Services": "2.4",
-  "Portable Storage & Modular Solutions": "2.6",
-  "Security Guards and Patrol Services": "561612",
+  "Architectural, Engineering, and Related Services": "5413",
+  "Engineering Services": "541330",
+  "Specialized Design Services": "5414",
+  "Computer Systems Design and Related Services": "5415",
+  "Custom Computer Programming Services": "541511",
+  "Computer Systems Design Services": "541512",
+  "Computer Facilities Management Services": "541513",
+  "Management, Scientific, and Technical Consulting Services": "5416",
+  "Human Resources Consulting Services": "541612",
+  "Scientific Research and Development Services": "5417",
+  "Advertising, Public Relations, and Related Services": "5418",
+  "Other Professional, Scientific, and Technical Services": "5419",
+  "Management of Companies and Enterprises": "551",
+  "Administrative and Support Services": "561",
+  "Landscaping Services": "561730",
+  "Janitorial Services": "561720",
+  "Carpet and Upholstery Cleaning Services": "561740",
+  "Other Services to Buildings and Dwellings": "561790",
   "Investigation and Security Services": "561610",
   "Investigation Services": "561611",
+  "Security Guards and Patrol Services": "561612",
   "Armored Car Services": "561613",
   "Security Systems Services": "561621",
+  "Waste Management and Remediation Services": "562",
+  "Solid Waste Collection": "562111",
+  "Other Waste Collection": "562119",
+  "Remediation Services": "562910",
+  "Educational Services": "611",
+  "Ambulatory Health Care Services": "621",
+  "Home Health Care Services": "621610", // Added home health care services
+  "Dental Practices": "621210",
+  Hospitals: "622",
+  "Nursing and Residential Care Facilities": "623",
+  "Social Assistance": "624",
+  "Child Day Care Services": "624410", // Added child day care services
+  "Performing Arts, Spectator Sports, and Related Industries": "711",
+  "Museums, Historical Sites, and Similar Institutions": "712",
+  "Amusement, Gambling, and Recreation Industries": "713",
+  "Fitness and Recreational Sports Centers": "713940", // Added fitness centers
+  Accommodation: "721",
+  "Food Services and Drinking Places": "722",
+  "Full-Service Restaurants": "722511", // Added detailed restaurant codes
+  "Limited-Service Restaurants": "722513",
+  "Repair and Maintenance": "811",
+  "Car Washes": "811192", // Added car wash services
+  "All Other Automotive Repair and Maintenance": "811198", // Added auto detailing and maintenance
+  "Personal and Laundry Services": "812",
+  "Funeral Homes and Funeral Services": "812210", // Added funeral services
+  "Drycleaning and Laundry Services": "812320", // Added dry cleaning services
+  "Pet Care Services": "812910", // Added pet care services
+  "Parking Lots and Garages": "812930", // Added parking services
+  "Religious, Grantmaking, Civic, Professional Organizations": "813",
+  "Executive, Legislative, and Other General Government Support": "921",
+  "Justice, Public Order, and Safety Activities": "922",
+  "Administration of Human Resource Programs": "923",
+  "Administration of Environmental Quality Programs": "924",
+  "Administration of Housing Programs, Urban Planning": "925",
+  "Administration of Economic Programs": "926",
+  "Space Research and Technology": "927",
+  "National Security and International Affairs": "928",
+  "Fire & Life Safety": "561621",
+  "HVACR Services": "238220",
 }
 
 const API_CONFIG = {
-  // SERP API (3 working keys for rotation)
   SERPAPI_PRIMARY: "ea4be3b298056ee31226234ee2a280409e20f2de623bbdb4a48d36a7bb4cfb0a",
   SERPAPI_BACKUP: "65ec74211e5929670ce9696d2c9a995772f8946f4923743f370938c541003a1c",
   SERPAPI_BACKUP2: "606fbdb7bf6d903f07f8666896c1801d793d76df85f6ef8c3e67092d1e0796ae",
-
-  // DataAxle - Business data
   DATAAXLE_KEY: "c54bb620b9afa2f0b48a26b3",
   DATAAXLE_PEOPLE: "e65ac1c780a",
   DATAAXLE_PLACES: "a96078c5944",
-
-  // Google APIs
   GOOGLE_MAPS_API_KEY: "AIzaSyDxwCGvlHvNdEssqgr-Sje-gHYDU0RiFGE",
   GOOGLE_PLACES_API_KEY: "AIzaSyDxwCGvlHvNdEssqgr-Sje-gHYDU0RiFGE",
-
-  // Census API
   CENSUS_API_KEY: "274084692b280203c821ec6bf4436266a28d2a4c",
-
-  // Yelp API
   YELP_API_KEY:
     "9R5wVAAW0ir_P1GrhxFsfVtv1aNolQHn3E15jQZqR43948PH99XndFP9x-aB82PSS3lBStlxhhtqykJ6qEImxUEVf2XzwSCAuh6A27e32Qmc3Js3tmJ-2kPRX6ahaHYx",
-
-  // ArcGIS - Mapping
   ARCGIS_API_KEY:
     "AAPTxy8BH1VEsoebNVZXo8HurAtkxQnvfFiXSrnotYNZULX3quyJt6P3bjLWMd8qpCLnElbp6VTbI3WGcrY-7k2iPxOfWMyWGUr59752G6xqHiqM-Rp_Htgf6KxHetTpspkth4Fa9_iERW1piaDrhV7bu-EVZs3c4wnE4U2z5SxvYlAGdNPwkPd2VcA-ckO8L6tpYZy2zXlrXJvjcAYxQlpOKifsGs7sdkC-qJ62UrCpeAY.AT1_EWiBBjFc",
 }
@@ -70,7 +173,7 @@ export default function BusinessLookup() {
   const [selectedState, setSelectedState] = useState("")
   const [selectedCity, setSelectedCity] = useState("")
   const [manualLocation, setManualLocation] = useState("")
-  const [selectedIndustry, setSelectedIndustry] = useState("")
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [useManualLocation, setUseManualLocation] = useState(false)
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<any[]>([])
@@ -79,6 +182,8 @@ export default function BusinessLookup() {
   const [maxResults, setMaxResults] = useState(100)
   const [serpKeyIndex, setSerpKeyIndex] = useState(0)
   const [showInfoModal, setShowInfoModal] = useState(false)
+  const [industrySearch, setIndustrySearch] = useState("")
+  const [showIndustryDropdown, setShowIndustryDropdown] = useState(false)
 
   const US_STATES = {
     Alabama: "AL",
@@ -168,8 +273,8 @@ export default function BusinessLookup() {
   }
 
   const searchBusinesses = async () => {
-    if (!selectedIndustry) {
-      alert("Please select an industry")
+    if (selectedIndustries.length === 0) {
+      alert("Please select at least one industry")
       return
     }
 
@@ -189,7 +294,9 @@ export default function BusinessLookup() {
     setResultCount(0)
 
     try {
-      const naicsCode = NAICS_CODES[selectedIndustry as keyof typeof NAICS_CODES]
+      const naicsCodes = selectedIndustries
+        .map((industry) => NAICS_CODES[industry as keyof typeof NAICS_CODES])
+        .join(",")
 
       console.log("[v0] Starting comprehensive business search with all APIs")
 
@@ -199,9 +306,9 @@ export default function BusinessLookup() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          industry: selectedIndustry,
+          industry: selectedIndustries.join(","),
           location: location,
-          naicsCode: naicsCode,
+          naicsCode: naicsCodes,
           maxResults: maxResults,
         }),
       })
@@ -231,31 +338,27 @@ export default function BusinessLookup() {
   }
 
   const calculateBusinessAnalysis = (business: any, allResults: any[]) => {
-    // TAM/TSM Analysis
-    const industryMultiplier = NAICS_CODES[selectedIndustry as keyof typeof NAICS_CODES] || 2.0
+    const industryMultiplier =
+      selectedIndustries.length > 0 ? NAICS_CODES[selectedIndustries[0] as keyof typeof NAICS_CODES] || 2.0 : 2.0
 
     const estimatedRevenue = business.revenue || (business.employees ? business.employees * 75000 : 500000)
     const tam = estimatedRevenue * industryMultiplier * 100 // Total addressable market
     const tsm = tam * 0.15 // Total serviceable market (15% of TAM)
 
-    // Market Fragmentation Analysis (HHI)
     const competitorCount = allResults.length
     const marketShare = 1 / competitorCount
     const hhi = competitorCount > 0 ? Math.min(10000, (marketShare * 10000) ** 2 * competitorCount) : 0
     const fragmentationLevel = hhi < 1500 ? "Highly Fragmented" : hhi < 2500 ? "Moderately Fragmented" : "Concentrated"
 
-    // Succession Risk Scoring
     const yearsInBusiness = business.years_established ? 2024 - business.years_established : 10
     const successionRisk = yearsInBusiness > 15 ? "High" : yearsInBusiness > 10 ? "Medium" : "Low"
 
-    // Digital Presence Analysis
     const hasWebsite = !!business.website
     const hasOnlineReviews = business.reviews > 10
     const digitalScore = (hasWebsite ? 40 : 0) + (hasOnlineReviews ? 30 : 0) + (business.rating > 4 ? 30 : 0)
     const digitalWeakness =
       digitalScore < 50 ? "High Opportunity" : digitalScore < 70 ? "Medium Opportunity" : "Strong Digital Presence"
 
-    // Acquisition Score
     const revenueScore = estimatedRevenue >= 2000000 && estimatedRevenue <= 12000000 ? 30 : 10
     const successionScore = successionRisk === "High" ? 25 : successionRisk === "Medium" ? 15 : 5
     const fragmentationScore = fragmentationLevel === "Highly Fragmented" ? 25 : 15
@@ -272,6 +375,123 @@ export default function BusinessLookup() {
       acquisitionScore,
       estimatedRevenue,
     }
+  }
+
+  const addIndustry = (industry: string) => {
+    if (!selectedIndustries.includes(industry)) {
+      setSelectedIndustries([...selectedIndustries, industry])
+    }
+    setIndustrySearch("")
+    setShowIndustryDropdown(false)
+  }
+
+  const removeIndustry = (industry: string) => {
+    setSelectedIndustries(selectedIndustries.filter((i) => i !== industry))
+  }
+
+  const filteredIndustries = Object.keys(NAICS_CODES).filter(
+    (industry) =>
+      industry.toLowerCase().includes(industrySearch.toLowerCase()) && !selectedIndustries.includes(industry),
+  )
+
+  const exportToCSV = () => {
+    if (results.length === 0) {
+      alert("No results to export. Please search for businesses first.")
+      return
+    }
+
+    const headers = [
+      "Company Name",
+      "Industry",
+      "NAICS Code",
+      "Address",
+      "Phone",
+      "Website",
+      "Rating",
+      "Reviews",
+      "Est. Revenue",
+      "Employees",
+      "Year Est.",
+      "Acquisition Score",
+      "TAM (Millions)",
+      "TSM (Millions)",
+      "HHI",
+      "Fragmentation Level",
+      "Succession Risk",
+      "Digital Opportunity",
+      "Market Position",
+      "Source",
+      "Search Location",
+      "Search Industries",
+    ]
+
+    const csvData = results.map((business) => {
+      const analysis = calculateBusinessAnalysis(business, results)
+      const businessName = (() => {
+        const name = business.name || business.title
+        if (typeof name === "string") {
+          return name
+        } else if (name && typeof name === "object") {
+          return (name as any)?.title || (name as any)?.alias || (name as any)?.name || "Unknown Business"
+        }
+        return "Unknown Business"
+      })()
+
+      const categories = (() => {
+        const cats = business.categories
+        if (typeof cats === "string") {
+          return cats
+        } else if (cats && typeof cats === "object") {
+          return (cats as any)?.title || (cats as any)?.alias || (cats as any)?.name || "Business Category"
+        }
+        return String(cats || "")
+      })()
+
+      return [
+        businessName,
+        categories,
+        business.naics_code || "",
+        business.address || "",
+        business.phone || "",
+        business.website || "",
+        business.rating || "",
+        business.reviews || "",
+        analysis.estimatedRevenue ? `$${(analysis.estimatedRevenue / 1000000).toFixed(1)}M` : "",
+        business.employees || "",
+        business.years_established || "",
+        analysis.acquisitionScore,
+        analysis.tam.toFixed(1),
+        analysis.tsm.toFixed(1),
+        analysis.hhi.toFixed(0),
+        analysis.fragmentationLevel,
+        analysis.successionRisk,
+        analysis.digitalWeakness,
+        analysis.acquisitionScore >= 80
+          ? "Prime Target"
+          : analysis.acquisitionScore >= 60
+            ? "Good Opportunity"
+            : "Monitor",
+        business.source || "",
+        useManualLocation ? manualLocation : selectedCity ? `${selectedCity}, ${selectedState}` : selectedState,
+        selectedIndustries.join("; "),
+      ]
+    })
+
+    const csvContent = [headers, ...csvData]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `business-intelligence-${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    console.log(`[v0] Exported ${results.length} businesses to CSV with comprehensive analysis data`)
   }
 
   return (
@@ -381,19 +601,60 @@ export default function BusinessLookup() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Industry (NAICS Classification) *</label>
-          <select
-            value={selectedIndustry}
-            onChange={(e) => setSelectedIndustry(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">Select Industry...</option>
-            {Object.entries(NAICS_CODES).map(([industry, code]) => (
-              <option key={industry} value={industry}>
-                {industry} (NAICS {code})
-              </option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Industries (NAICS Classification) *</label>
+
+          {selectedIndustries.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {selectedIndustries.map((industry) => (
+                <div
+                  key={industry}
+                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                >
+                  {industry} (NAICS {NAICS_CODES[industry as keyof typeof NAICS_CODES]})
+                  <button onClick={() => removeIndustry(industry)} className="hover:bg-blue-200 rounded-full p-1">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="relative">
+            <input
+              type="text"
+              value={industrySearch}
+              onChange={(e) => {
+                setIndustrySearch(e.target.value)
+                setShowIndustryDropdown(true)
+              }}
+              onFocus={() => setShowIndustryDropdown(true)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Search and select industries..."
+            />
+
+            {showIndustryDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {filteredIndustries.length > 0 ? (
+                  filteredIndustries.map((industry) => (
+                    <button
+                      key={industry}
+                      onClick={() => addIndustry(industry)}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="font-medium">{industry}</div>
+                      <div className="text-sm text-gray-500">
+                        NAICS {NAICS_CODES[industry as keyof typeof NAICS_CODES]}
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-gray-500">No industries found</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {showIndustryDropdown && <div className="fixed inset-0 z-5" onClick={() => setShowIndustryDropdown(false)} />}
         </div>
 
         <div>
@@ -481,7 +742,8 @@ export default function BusinessLookup() {
 
         <div className="p-3 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Target:</strong> {selectedIndustry || "No industry selected"} in{" "}
+            <strong>Target:</strong>{" "}
+            {selectedIndustries.length > 0 ? selectedIndustries.join(", ") : "No industries selected"} in{" "}
             {useManualLocation
               ? manualLocation || "No location entered"
               : selectedCity
@@ -492,7 +754,7 @@ export default function BusinessLookup() {
 
         <button
           onClick={searchBusinesses}
-          disabled={loading || !selectedIndustry || (!selectedState && !manualLocation)}
+          disabled={loading || selectedIndustries.length === 0 || (!selectedState && !manualLocation)}
           className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
         >
           {loading ? (
@@ -515,7 +777,16 @@ export default function BusinessLookup() {
             <h3 className="text-lg font-semibold text-gray-900">
               Comprehensive Results ({resultCount} businesses found)
             </h3>
-            <div className="text-sm text-gray-600">Multi-source data • Up to {maxResults} results</div>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">Multi-source data • Up to {maxResults} results</div>
+              <button
+                onClick={exportToCSV}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -539,12 +810,10 @@ export default function BusinessLookup() {
                       <div>
                         <h4 className="font-semibold text-gray-900">
                           {(() => {
-                            // Ensure we always render a string, never an object
                             const name = business.name || business.title
                             if (typeof name === "string") {
                               return name
                             } else if (name && typeof name === "object") {
-                              // Handle objects with alias/title properties
                               return (
                                 (name as any)?.title ||
                                 (name as any)?.alias ||
@@ -562,7 +831,6 @@ export default function BusinessLookup() {
                               if (typeof categories === "string") {
                                 return categories
                               } else if (categories && typeof categories === "object") {
-                                // Handle objects with alias/title properties
                                 return (
                                   (categories as any)?.title ||
                                   (categories as any)?.alias ||
@@ -719,7 +987,7 @@ export default function BusinessLookup() {
                                 body: JSON.stringify({
                                   ...business,
                                   ...analysis,
-                                  industry: selectedIndustry,
+                                  industry: selectedIndustries.join(","),
                                   searchLocation: useManualLocation
                                     ? manualLocation
                                     : selectedCity

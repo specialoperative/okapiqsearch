@@ -424,7 +424,7 @@ export default function YBridgeAcquisitionTool() {
       console.log("[v0] API response data:", data)
 
       if (data.success) {
-        const scoredResults = data.businesses
+        const scoredResults = (data.results || [])
           .map((business: any) => ({
             ...business,
             acquisitionScore: calculateIndustrySpecificAcquisitionScore(business, filters.industry),

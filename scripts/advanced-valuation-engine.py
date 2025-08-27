@@ -569,7 +569,7 @@ export const useAppStore = create((set, get) => ({ input: { category: 'hvac', zi
 
 
 ### 7.2 API Client (`/frontend/src/lib/api.ts`)
-\`\`\`ts
+```ts
 import { BusinessInput, ValuationResult } from '../../shared/types/business';
 
 
