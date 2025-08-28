@@ -236,6 +236,7 @@ export default function BusinessLookup() {
     "West Virginia": "WV",
     Wisconsin: "WI",
     Wyoming: "WY",
+    "District of Columbia": "DC",
   }
 
   const MAJOR_CITIES: Record<string, string[]> = {
@@ -249,6 +250,8 @@ export default function BusinessLookup() {
     Georgia: ["Atlanta", "Augusta", "Columbus", "Macon", "Savannah", "Athens"],
     "North Carolina": ["Charlotte", "Raleigh", "Greensboro", "Durham", "Winston-Salem", "Fayetteville"],
     Michigan: ["Detroit", "Grand Rapids", "Warren", "Sterling Heights", "Lansing", "Ann Arbor"],
+    Washington: ["Seattle", "Spokane", "Tacoma", "Vancouver", "Bellevue", "Everett", "Kent"],
+    "District of Columbia": ["Washington"],
   }
 
   const validateApiKeys = async () => {
@@ -590,7 +593,7 @@ export default function BusinessLookup() {
 
       <div className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Business Name (Optional)</label>
+          <label className="block text-sm font-medium text-black mb-2">Business Name (Optional)</label>
           <input
             type="text"
             value={businessName}
@@ -601,7 +604,7 @@ export default function BusinessLookup() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Industries (NAICS Classification) *</label>
+          <label className="block text-sm font-medium text-black mb-2">Industries (NAICS Classification) *</label>
 
           {selectedIndustries.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -658,7 +661,7 @@ export default function BusinessLookup() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Location Targeting *</label>
+          <label className="block text-sm font-medium text-black mb-3">Location Targeting *</label>
           <div className="flex gap-4 mb-4">
             <button
               onClick={() => setUseManualLocation(false)}
@@ -681,7 +684,7 @@ export default function BusinessLookup() {
           {!useManualLocation ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">State</label>
+                <label className="block text-xs font-medium text-black mb-1">State</label>
                 <select
                   value={selectedState}
                   onChange={(e) => {
@@ -699,7 +702,7 @@ export default function BusinessLookup() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">City (Optional)</label>
+                <label className="block text-xs font-medium text-black mb-1">City (Optional)</label>
                 <select
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
@@ -728,7 +731,7 @@ export default function BusinessLookup() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Results</label>
+          <label className="block text-sm font-medium text-black mb-2">Maximum Results</label>
           <select
             value={maxResults}
             onChange={(e) => setMaxResults(Number(e.target.value))}

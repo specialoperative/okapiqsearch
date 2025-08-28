@@ -23,17 +23,66 @@ function getSerpKey() {
   return key
 }
 
+function normalizeLocation(location: string): string {
+  if (!location) return location
+
+  const normalized = location.toLowerCase().trim()
+
+  // Handle Washington state vs Washington DC disambiguation
+  if (normalized === "washington" || normalized === "washington state" || normalized.includes("washington, wa")) {
+    return "Washington State, WA"
+  }
+
+  if (
+    normalized === "washington dc" ||
+    normalized === "washington d.c." ||
+    normalized === "district of columbia" ||
+    normalized.includes("washington, dc")
+  ) {
+    return "Washington, DC"
+  }
+
+  // Handle other common ambiguities
+  if (normalized === "georgia" && !normalized.includes("ga")) {
+    return "Georgia, USA" // Distinguish from Georgia country
+  }
+
+  // Add state abbreviation for better API targeting
+  const stateMapping: Record<string, string> = {
+    california: "California, CA",
+    texas: "Texas, TX",
+    florida: "Florida, FL",
+    "new york": "New York, NY",
+    illinois: "Illinois, IL",
+    pennsylvania: "Pennsylvania, PA",
+    ohio: "Ohio, OH",
+    michigan: "Michigan, MI",
+    "north carolina": "North Carolina, NC",
+    virginia: "Virginia, VA",
+  }
+
+  for (const [state, fullName] of Object.entries(stateMapping)) {
+    if (normalized === state) {
+      return fullName
+    }
+  }
+
+  return location
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { industry, location, naicsCode, maxResults = 100 } = await request.json()
 
+    const normalizedLocation = normalizeLocation(location)
     console.log("[v0] Starting comprehensive business search with ALL available APIs")
+    console.log("[v0] Original location:", location, "-> Normalized location:", normalizedLocation)
     const searchResults: any[] = []
 
     // 1. SERP API - Google Maps (Primary source)
     try {
       const serpKey = getSerpKey()
-      const serpUrl = `https://serpapi.com/search.json?api_key=${serpKey}&engine=google_maps&q=${encodeURIComponent(industry)}&location=${encodeURIComponent(location)}&num=50`
+      const serpUrl = `https://serpapi.com/search.json?api_key=${serpKey}&engine=google_maps&q=${encodeURIComponent(industry)}&location=${encodeURIComponent(normalizedLocation)}&num=50`
 
       const serpResponse = await fetch(serpUrl)
       if (serpResponse.ok) {
@@ -55,7 +104,7 @@ export async function POST(request: NextRequest) {
             ...business,
           })) || []
         searchResults.push(...serpResults)
-        console.log("[v0] SERP API returned", serpResults.length, "results")
+        console.log("[v0] SERP API returned", serpResults.length, "results for", normalizedLocation)
       }
     } catch (error) {
       console.error("[v0] SERP API error:", error)
@@ -63,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Yelp API - Reviews and ratings
     try {
-      const yelpUrl = `https://api.yelp.com/v3/businesses/search?location=${encodeURIComponent(location)}&term=${encodeURIComponent(industry)}&limit=50`
+      const yelpUrl = `https://api.yelp.com/v3/businesses/search?location=${encodeURIComponent(normalizedLocation)}&term=${encodeURIComponent(industry)}&limit=50`
 
       const yelpResponse = await fetch(yelpUrl, {
         headers: {
@@ -92,7 +141,7 @@ export async function POST(request: NextRequest) {
             ...business,
           })) || []
         searchResults.push(...yelpResults)
-        console.log("[v0] Yelp API returned", yelpResults.length, "results")
+        console.log("[v0] Yelp API returned", yelpResults.length, "results for", normalizedLocation)
       }
     } catch (error) {
       console.error("[v0] Yelp API error:", error)
@@ -100,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Google Places API - Detailed business info
     try {
-      const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(industry + " in " + location)}&key=${API_CONFIG.GOOGLE_MAPS_API_KEY}`
+      const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(industry + " in " + normalizedLocation)}&key=${API_CONFIG.GOOGLE_MAPS_API_KEY}`
 
       const placesResponse = await fetch(placesUrl)
       if (placesResponse.ok) {
@@ -124,7 +173,7 @@ export async function POST(request: NextRequest) {
             ...business,
           })) || []
         searchResults.push(...placesResults)
-        console.log("[v0] Google Places API returned", placesResults.length, "results")
+        console.log("[v0] Google Places API returned", placesResults.length, "results for", normalizedLocation)
       }
     } catch (error) {
       console.error("[v0] Google Places API error:", error)
@@ -201,7 +250,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           what: industry,
-          where: location,
+          where: normalizedLocation,
           naics: naicsCode,
           limit: 50,
           fields: ["name", "address", "phone", "website", "employees", "revenue", "year_established", "credit_rating"],
@@ -225,7 +274,7 @@ export async function POST(request: NextRequest) {
             ...business,
           })) || []
         searchResults.push(...dataAxleResults)
-        console.log("[v0] DataAxle API returned", dataAxleResults.length, "results")
+        console.log("[v0] DataAxle API returned", dataAxleResults.length, "results for", normalizedLocation)
       }
     } catch (error) {
       console.error("[v0] DataAxle API error:", error)
@@ -237,7 +286,7 @@ export async function POST(request: NextRequest) {
       const arcgisParams = new URLSearchParams({
         f: "json",
         token: API_CONFIG.ARCGIS_API_KEY,
-        singleLine: `${industry} ${location}`,
+        singleLine: `${industry} ${normalizedLocation}`,
         category: "Business",
         maxLocations: "50",
       })
@@ -260,7 +309,7 @@ export async function POST(request: NextRequest) {
             ...business,
           })) || []
         searchResults.push(...arcgisResults)
-        console.log("[v0] ArcGIS API returned", arcgisResults.length, "results")
+        console.log("[v0] ArcGIS API returned", arcgisResults.length, "results for", normalizedLocation)
       }
     } catch (error) {
       console.error("[v0] ArcGIS API error:", error)
@@ -269,7 +318,7 @@ export async function POST(request: NextRequest) {
     // 7. Yellow Pages API simulation (web scraping alternative)
     try {
       const yellowPagesResults = await fetch(
-        `https://www.yellowpages.com/search?search_terms=${encodeURIComponent(industry)}&geo_location_terms=${encodeURIComponent(location)}`,
+        `https://www.yellowpages.com/search?search_terms=${encodeURIComponent(industry)}&geo_location_terms=${encodeURIComponent(normalizedLocation)}`,
       )
       if (yellowPagesResults.ok) {
         console.log("[v0] Yellow Pages data source accessed for additional coverage")
@@ -281,7 +330,7 @@ export async function POST(request: NextRequest) {
 
     // 8. Better Business Bureau API simulation
     try {
-      const bbbUrl = `https://api.bbb.org/api/orgs/search?BusinessName=${encodeURIComponent(industry)}&City=${encodeURIComponent(location)}`
+      const bbbUrl = `https://api.bbb.org/api/orgs/search?BusinessName=${encodeURIComponent(industry)}&City=${encodeURIComponent(normalizedLocation)}`
       console.log("[v0] BBB API integration attempted for business credibility data")
       // Note: BBB API requires special access and authentication
     } catch (error) {
