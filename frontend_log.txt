@@ -6,10 +6,10 @@
    - Local:        http://localhost:3000
    - Environments: .env.local
 
- ✓ Ready in 3.1s
+ ✓ Ready in 3.8s
  ○ Compiling / ...
- ✓ Compiled / in 2.9s (1172 modules)
- ✓ Compiled in 484ms (591 modules)
- ○ Compiling /oppy ...
- ✓ Compiled /oppy in 512ms (1164 modules)
+ ✓ Compiled / in 6.1s (1172 modules)
+ ✓ Compiled in 706ms (591 modules)
+ ○ Compiling /crm ...
+ ✓ Compiled /crm in 774ms (1172 modules)
  ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload

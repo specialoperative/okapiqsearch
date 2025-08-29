@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, status
 from pydantic import BaseModel
 import time
 import re
+import aiohttp
+import urllib.parse
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +137,94 @@ async def comprehensive_market_scan(request: MarketScanRequest, background_tasks
                     seen.add(key)
                     deduped.append(b)
             sample_businesses = deduped[:min(request.max_businesses or 20, 50)]
+            
+            # Enrich websites using SERP API
+            try:
+                from ..core.config import settings
+                serp_key = getattr(settings, 'SERPAPI_KEY', None)
+                if serp_key and sample_businesses:
+                    logger.info(f"Enriching websites for {len(sample_businesses)} businesses")
+                    
+                    async def enrich_website(business):
+                        """Find website for a single business"""
+                        try:
+                            # Skip if already has a valid website
+                            current_website = business.get('website', '').strip()
+                            if current_website and not any(p in current_website.lower() for p in 
+                                ['yelp.com', 'google.com', 'facebook.com', 'yellowpages.com']):
+                                return
+                            
+                            name = business.get('name', '').strip()
+                            if not name:
+                                return
+                            
+                            # Build targeted search query
+                            location = request.location or ''
+                            search_query = f'"{name}" official website {location}'
+                            
+                            params = {
+                                'q': search_query,
+                                'api_key': serp_key,
+                                'engine': 'google',
+                                'num': 10
+                            }
+                            
+                            timeout = aiohttp.ClientTimeout(total=5)
+                            async with aiohttp.ClientSession(timeout=timeout) as session:
+                                url = f"https://serpapi.com/search.json?{urllib.parse.urlencode(params)}"
+                                async with session.get(url) as resp:
+                                    if resp.status != 200:
+                                        return
+                                    data = await resp.json()
+                                    
+                                    # Check organic results for business website
+                                    for result in data.get('organic_results', [])[:5]:
+                                        link = result.get('link', '')
+                                        title = result.get('title', '').lower()
+                                        snippet = result.get('snippet', '').lower()
+                                        
+                                        if not link:
+                                            continue
+                                        
+                                        # Skip aggregator sites
+                                        skip_domains = [
+                                            'yelp.com', 'google.com', 'facebook.com', 'linkedin.com',
+                                            'yellowpages.com', 'bbb.org', 'angi.com', 'thumbtack.com',
+                                            'homeadvisor.com', 'wikipedia.org', 'instagram.com', 'twitter.com'
+                                        ]
+                                        
+                                        if any(domain in link.lower() for domain in skip_domains):
+                                            continue
+                                        
+                                        # Check if result mentions business name
+                                        name_lower = name.lower()
+                                        name_words = [w for w in name_lower.split() if len(w) > 2]
+                                        
+                                        if (name_lower in title or name_lower in snippet or
+                                            any(word in link.lower() for word in name_words)):
+                                            # Found likely website
+                                            if not link.startswith(('http://', 'https://')):
+                                                link = 'https://' + link
+                                            business['website'] = link
+                                            logger.info(f"Found website for {name}: {link}")
+                                            break
+                                            
+                        except Exception as e:
+                            logger.debug(f"Website enrichment failed for {business.get('name', '')}: {e}")
+                    
+                    # Enrich websites in parallel with rate limiting
+                    tasks = []
+                    for i, biz in enumerate(sample_businesses):
+                        if i > 0 and i % 5 == 0:
+                            await asyncio.sleep(0.5)  # Rate limit
+                        tasks.append(enrich_website(biz))
+                    
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    logger.info(f"Website enrichment completed")
+                    
+            except Exception as e:
+                logger.warning(f"Website enrichment failed: {e}")
+                
         else:
             logger.warning("No real business data found - returning empty result")
             sample_businesses = []
