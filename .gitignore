@@ -76,6 +76,11 @@ pids
 
 # Coverage directory used by tools like istanbul
 coverage/
+playwright-results/
+playwright-results-*/
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo
 
 # nyc test coverage
 .nyc_output
